@@ -4,6 +4,8 @@ This is a port of the MapBox company's Earcut computer code, which triangulates 
 Please see https://github.com/mapbox/earcut for more information about the original 
 javascript code. This port is to the Rust computer language, and is single-threaded.
 
+This is a published fork of [donbright/earcutr](https://github.com/donbright/earcutr).
+
 This port is not affiliated with MapBox in any way and no endorsement is implied. 
 
 ![image showing an outline of a circle with a hole inside of it, with triangles inside of it](viz/circle.png "circle, earcut")
