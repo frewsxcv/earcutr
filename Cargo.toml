@@ -5,6 +5,10 @@ authors = ["don bright <hmbright@fastmail.com>"]
 description = "port of MapBox's earcut triangulation code to Rust language"
 repository = "https://github.com/frewsxcv/earcutr/"
 license = "ISC"
+edition = "2018"
+
+[dependencies]
+num-traits = "0.2"
 
 [dev-dependencies]
 serde = "1.0.80"
@@ -20,8 +24,3 @@ harness = false
 # Valgrind's Callgrind or Perf
 [profile.release] 
 debug = true
-
-# for profiling with CpuProfiler
-#[dependencies]
-#cpuprofiler = "0.0.3"
-
