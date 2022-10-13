@@ -14,7 +14,7 @@ This port is not affiliated with MapBox in any way and no endorsement is implied
 
 ```rust
 extern crate earcutr;
-var triangles = earcutr::earcut(&vec![10,0, 0,50, 60,60, 70,10],&vec![],2);
+var triangles = earcutr::earcut(&[10,0, 0,50, 60,60, 70,10],&[],2);
 println!("{:?}",triangles);  // [1, 0, 3, 3, 2, 1]
 ```
 
@@ -31,7 +31,7 @@ Each group of three vertex indices in the resulting array forms a triangle.
 
 ```rust
 // triangulating a polygon with a hole
-earcutr::earcut(&vec![0.,0., 100.,0., 100.,100., 0.,100.,  20.,20., 80.,20., 80.,80., 20.,80.], &vec![4],2);
+earcutr::earcut(&[0.,0., 100.,0., 100.,100., 0.,100.,  20.,20., 80.,20., 80.,80., 20.,80.], &[4],2);
 // [3,0,4, 5,4,0, 3,4,7, 5,0,1, 2,3,7, 6,5,1, 2,7,6, 6,1,2]
 ```
 

@@ -260,8 +260,8 @@ fn compare_x<T: Float + Display>(a: &Node<T>, b: &Node<T>) -> std::cmp::Ordering
 // without holes
 fn eliminate_holes<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    data: &Vec<T>,
-    hole_indices: &Vec<usize>,
+    data: &[T],
+    hole_indices: &[usize],
     inouter_node: NodeIdx,
 ) -> NodeIdx {
     let mut outer_node = inouter_node;
@@ -648,7 +648,7 @@ fn filter_points<T: Float + Display>(
 // create a circular doubly linked list from polygon points in the
 // specified winding order
 fn linked_list<T: Float + Display>(
-    data: &Vec<T>,
+    data: &[T],
     start: usize,
     end: usize,
     clockwise: bool,
@@ -664,7 +664,7 @@ fn linked_list<T: Float + Display>(
 // add new nodes to an existing linked list.
 fn linked_list_add_contour<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    data: &Vec<T>,
+    data: &[T],
     start: usize,
     end: usize,
     clockwise: bool,
@@ -747,8 +747,8 @@ fn point_in_triangle<T: Float + Display>(
 }
 
 pub fn earcut<T: Float + Display>(
-    data: &Vec<T>,
-    hole_indices: &Vec<usize>,
+    data: &[T],
+    hole_indices: &[usize],
     dims: usize,
 ) -> Vec<usize> {
     let outer_len = match hole_indices.len() {
@@ -1183,15 +1183,15 @@ fn split_bridge_polygon<T: Float + Display>(
 // return a percentage difference between the polygon area and its
 // triangulation area; used to verify correctness of triangulation
 pub fn deviation<T: Float + Display>(
-    data: &Vec<T>,
-    hole_indices: &Vec<usize>,
+    data: &[T],
+    hole_indices: &[usize],
     dims: usize,
-    triangles: &Vec<usize>,
+    triangles: &[usize],
 ) -> T {
     if DIM != dims {
         return T::nan();
     }
-    let mut indices = hole_indices.clone();
+    let mut indices = hole_indices.to_vec();
     indices.push(data.len() / DIM);
     let (ix, iy) = (indices.iter(), indices.iter().skip(1));
     let body_area = signed_area(&data, 0, indices[0] * DIM).abs();
@@ -1215,7 +1215,7 @@ pub fn deviation<T: Float + Display>(
     }
 }
 
-fn signed_area<T: Float + Display>(data: &Vec<T>, start: usize, end: usize) -> T {
+fn signed_area<T: Float + Display>(data: &[T], start: usize, end: usize) -> T {
     let i = (start..end).step_by(DIM);
     let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
     let zero = T::zero();
