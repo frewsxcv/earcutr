@@ -123,11 +123,7 @@ fn bench_flatten(bench: &mut Bencher) {
 
 fn bench_indices_2d(bench: &mut Bencher) {
     bench.iter(|| {
-        let _indices = earcutr::earcut(
-            &[10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0],
-            &[],
-            2,
-        );
+        let _indices = earcutr::earcut(&[10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0], &[], 2);
     })
 }
 

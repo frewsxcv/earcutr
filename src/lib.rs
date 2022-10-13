@@ -746,11 +746,7 @@ fn point_in_triangle<T: Float + Display>(
         && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
 }
 
-pub fn earcut<T: Float + Display>(
-    data: &[T],
-    hole_indices: &[usize],
-    dims: usize,
-) -> Vec<usize> {
+pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
     let outer_len = match hole_indices.len() {
         0 => data.len(),
         _ => hole_indices[0] * DIM,
@@ -1422,7 +1418,7 @@ mod tests {
                                         //   bits = 1 and the other bits = 0
         h <<= 5; // shift h left by 5 bits
         h ^= (highorder >> 27); // move the highorder 5 bits to the low-ord$
-                                   //   end and XOR into h
+                                //   end and XOR into h
         h ^= n; // XOR h and ki
         h
     }
@@ -1725,10 +1721,20 @@ mod tests {
 
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.9, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
-        assert!(!pseudo_intersects(&ll.nodes[4], &ll.nodes[5], &ll.nodes[1], &ll.nodes[3]));
+        assert!(!pseudo_intersects(
+            &ll.nodes[4],
+            &ll.nodes[5],
+            &ll.nodes[1],
+            &ll.nodes[3]
+        ));
 
         // special case
-        assert!(pseudo_intersects(&ll.nodes[4], &ll.nodes[5], &ll.nodes[3], &ll.nodes[1]));
+        assert!(pseudo_intersects(
+            &ll.nodes[4],
+            &ll.nodes[5],
+            &ll.nodes[3],
+            &ll.nodes[1]
+        ));
     }
 
     #[test]
