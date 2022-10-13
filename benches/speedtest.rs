@@ -145,7 +145,7 @@ fn bench_indices_3d(bench: &mut Bencher) {
 
 fn bench_empty(bench: &mut Bencher) {
     bench.iter(|| {
-        let _indices = earcutr::earcut(&vec![], &vec![], 2);
+        let _indices = earcutr::earcut::<f32>(&[], &[], 2);
     })
 }
 
