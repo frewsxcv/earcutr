@@ -41,7 +41,7 @@ fn mkoutput(filename_w_dashes: &str, triangles: Vec<usize>) {
 
 fn parse_json(rawdata: &str) -> Option<Vec<Vec<Vec<f64>>>> {
     let mut v: Vec<Vec<Vec<f64>>> = Vec::new();
-    match serde_json::from_str::<serde_json::Value>(&rawdata) {
+    match serde_json::from_str::<serde_json::Value>(rawdata) {
         Err(e) => println!("error deserializing, {}", e),
         Ok(jsondata) => {
             if jsondata.is_array() {
@@ -67,7 +67,7 @@ fn parse_json(rawdata: &str) -> Option<Vec<Vec<Vec<f64>>>> {
             }
         }
     };
-    return Some(v);
+    Some(v)
 }
 
 fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
@@ -93,7 +93,7 @@ fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
             };
         }
     };
-    return earcutr::flatten(&xdata);
+    earcutr::flatten(&xdata)
 }
 
 fn bench_quadrilateral(bench: &mut Bencher) {

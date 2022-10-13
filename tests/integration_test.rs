@@ -23,7 +23,7 @@ macro_rules! dlog {
 
 fn parse_json(rawdata: &str) -> Option<Vec<Vec<Vec<f64>>>> {
     let mut v: Vec<Vec<Vec<f64>>> = Vec::new();
-    match serde_json::from_str::<serde_json::Value>(&rawdata) {
+    match serde_json::from_str::<serde_json::Value>(rawdata) {
         Err(e) => println!("error deserializing, {}", e),
         Ok(jsondata) => {
             if jsondata.is_array() {
@@ -51,7 +51,7 @@ fn parse_json(rawdata: &str) -> Option<Vec<Vec<Vec<f64>>>> {
             }
         }
     };
-    return Some(v);
+    Some(v)
 }
 
 fn mkoutput(
@@ -140,7 +140,7 @@ fn area_test(filename: &str, expected_num_tris: usize, expected_deviation: f64) 
         expected_num_tris, edeviation, actual_num_tris, actual_deviation
     );
     if visualize {
-        match mkoutput(&filename, triangles, &xdata, pass, &rpt) {
+        match mkoutput(filename, triangles, &xdata, pass, &rpt) {
             Err(e) => println!("error writing output {}", e),
             _ => {}
         }
@@ -178,7 +178,7 @@ fn test_indices_3d() {
 fn test_empty() {
     let indices = earcutr::earcut::<f64>(&[], &[], 2);
     println!("{:?}", indices);
-    assert!(indices.len() == 0);
+    assert!(indices.is_empty());
 }
 
 // file based tests
