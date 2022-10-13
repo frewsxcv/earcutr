@@ -98,7 +98,7 @@ fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
 
 fn bench_quadrilateral(bench: &mut Bencher) {
     bench.iter(|| {
-        earcutr::earcut(&vec![10., 0., 0., 50., 60., 60., 70., 10.], &vec![], 2);
+        earcutr::earcut(&[10., 0., 0., 50., 60., 60., 70., 10.], &[], 2);
     });
 }
 
@@ -107,7 +107,7 @@ fn bench_hole(bench: &mut Bencher) {
     let h = vec![10., 10., 40., 10., 40., 40., 10., 40.];
     v.extend(h);
     bench.iter(|| {
-        earcutr::earcut(&v, &vec![4], 2);
+        earcutr::earcut(&v, &[4], 2);
     })
 }
 
@@ -124,8 +124,8 @@ fn bench_flatten(bench: &mut Bencher) {
 fn bench_indices_2d(bench: &mut Bencher) {
     bench.iter(|| {
         let _indices = earcutr::earcut(
-            &vec![10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0],
-            &vec![],
+            &[10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0],
+            &[],
             2,
         );
     })
@@ -134,10 +134,10 @@ fn bench_indices_2d(bench: &mut Bencher) {
 fn bench_indices_3d(bench: &mut Bencher) {
     bench.iter(|| {
         let _indices = earcutr::earcut(
-            &vec![
+            &[
                 10.0, 0.0, 0.0, 0.0, 50.0, 0.0, 60.0, 60.0, 0.0, 70.0, 10.0, 0.0,
             ],
-            &vec![],
+            &[],
             3,
         );
     })
