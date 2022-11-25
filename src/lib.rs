@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use num_traits::float::Float;
 use std::fmt::Display;
 
@@ -1248,6 +1246,8 @@ fn pb(a: bool) -> String {
         false => String::from(" "),
     }
 }
+
+#[allow(dead_code)]
 fn dump<T: Float + Display>(ll: &LinkedLists<T>) -> String {
     let mut s = format!("LL, #nodes: {}", ll.nodes.len());
     s.push_str(&format!(
@@ -1280,6 +1280,7 @@ fn dump<T: Float + Display>(ll: &LinkedLists<T>) -> String {
     s
 }
 
+#[allow(dead_code)]
 fn cycle_dump<T: Float + Display>(ll: &LinkedLists<T>, p: NodeIdx) -> String {
     let mut s = format!("cycle from {}, ", p);
     s.push_str(&format!(" len {}, idxs:", 0)); //cycle_len(&ll, p)));
@@ -1337,6 +1338,7 @@ mod tests {
         format!("cycles report:\n{:?}", markv)
     }
 
+    #[allow(dead_code)]
     fn dump_cycle<T: num_traits::float::Float + std::fmt::Display>(
         ll: &LinkedLists<T>,
         start: usize,
@@ -1411,6 +1413,7 @@ mod tests {
 
     // https://www.cs.hmc.edu/~geoff/classes/hmc.cs070.200101/homework10/hashfuncs.$
     // https://stackoverflow.com/questions/1908492/unsigned-integer-in-javascript
+    #[allow(dead_code)]
     fn horsh(mut h: u32, n: u32) -> u32 {
         let highorder = h & 0xf8000000; // extract high-order 5 bits from h
                                         // 0xf8000000 is the hexadecimal representat$
@@ -1424,6 +1427,7 @@ mod tests {
     }
 
     // find the node with 'i' of starti, horsh it
+    #[allow(dead_code)]
     fn horsh_ll<T: num_traits::float::Float + std::fmt::Display>(
         ll: &LinkedLists<T>,
         starti: VertIdx,
