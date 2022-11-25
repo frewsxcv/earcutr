@@ -437,8 +437,7 @@ fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: NodeIdx) {
             qsize = insize;
 
             while psize > 0 || (qsize > 0 && q != NULL) {
-                if psize > 0 && (qsize == 0 || q == NULL || ll.nodes[p].z <= ll.nodes[q].z)
-                {
+                if psize > 0 && (qsize == 0 || q == NULL || ll.nodes[p].z <= ll.nodes[q].z) {
                     e = p;
                     p = ll.nodes[p].nextz_idx;
                     psize -= 1;
@@ -860,9 +859,7 @@ fn split_earcut<T: Float + Display>(
     loop {
         let mut b = next!(ll, a).next_idx;
         while b != ll.nodes[a].prev_idx {
-            if ll.nodes[a].i != ll.nodes[b].i
-                && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b])
-            {
+            if ll.nodes[a].i != ll.nodes[b].i && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b]) {
                 // split the polygon in two by the diagonal
                 let mut c = split_bridge_polygon(ll, a, b);
 
@@ -1135,18 +1132,8 @@ fn split_bridge_polygon<T: Float + Display>(
 ) -> NodeIdx {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = Node::new(
-        ll.nodes[a].i,
-        ll.nodes[a].x,
-        ll.nodes[a].y,
-        cidx,
-    );
-    let mut d = Node::new(
-        ll.nodes[b].i,
-        ll.nodes[b].x,
-        ll.nodes[b].y,
-        didx,
-    );
+    let mut c = Node::new(ll.nodes[a].i, ll.nodes[a].x, ll.nodes[a].y, cidx);
+    let mut d = Node::new(ll.nodes[b].i, ll.nodes[b].x, ll.nodes[b].y, didx);
 
     let an = ll.nodes[a].next_idx;
     let bp = ll.nodes[b].prev_idx;
@@ -1415,7 +1402,7 @@ mod tests {
                                         //   bits = 1 and the other bits = 0
         h <<= 5; // shift h left by 5 bits
         h ^= highorder >> 27; // move the highorder 5 bits to the low-ord$
-                                //   end and XOR into h
+                              //   end and XOR into h
         h ^= n; // XOR h and ki
         h
     }
@@ -1672,16 +1659,8 @@ mod tests {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.9, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
         dlog!(9, "{}", dump(&ll));
-        dlog!(
-            5,
-            "{}",
-            intersects_polygon(&ll, &ll.nodes[0], &ll.nodes[2])
-        );
-        dlog!(
-            5,
-            "{}",
-            intersects_polygon(&ll, &ll.nodes[2], &ll.nodes[0])
-        );
+        dlog!(5, "{}", intersects_polygon(&ll, &ll.nodes[0], &ll.nodes[2]));
+        dlog!(5, "{}", intersects_polygon(&ll, &ll.nodes[2], &ll.nodes[0]));
     }
 
     #[test]
