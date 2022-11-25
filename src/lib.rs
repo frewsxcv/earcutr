@@ -1417,7 +1417,7 @@ mod tests {
                                         //   for the 32-bit number with the first fi$
                                         //   bits = 1 and the other bits = 0
         h <<= 5; // shift h left by 5 bits
-        h ^= (highorder >> 27); // move the highorder 5 bits to the low-ord$
+        h ^= highorder >> 27; // move the highorder 5 bits to the low-ord$
                                 //   end and XOR into h
         h ^= n; // XOR h and ki
         h
