@@ -125,18 +125,21 @@ impl<T: Float + Display> LinkedLists<T> {
     fn iter_pairs(&self, r: std::ops::Range<NodeIdx>) -> NodePairIterator<T> {
         return NodePairIterator::new(self, r.start, r.end);
     }
-    fn insert_node(&mut self, i: VertIdx, x: T, y: T, last: NodeIdx) -> NodeIdx {
+    fn insert_node(&mut self, i: VertIdx, x: T, y: T, last: Option<NodeIdx>) -> NodeIdx {
         let mut p = Node::new(i, x, y, self.nodes.len());
-        if last == NULL {
-            p.next_idx = p.idx;
-            p.prev_idx = p.idx;
-        } else {
-            p.next_idx = self.nodes[last].next_idx;
-            p.prev_idx = last;
-            let lastnextidx = self.nodes[last].next_idx;
-            nodemut!(self, lastnextidx).prev_idx = p.idx;
-            nodemut!(self, last).next_idx = p.idx;
-        };
+        match last {
+            None => {
+                p.next_idx = p.idx;
+                p.prev_idx = p.idx;
+            }
+            Some(last) => {
+                p.next_idx = self.nodes[last].next_idx;
+                p.prev_idx = last;
+                let lastnextidx = self.nodes[last].next_idx;
+                nodemut!(self, lastnextidx).prev_idx = p.idx;
+                nodemut!(self, last).next_idx = p.idx;
+            }
+        }
         let result = p.idx;
         self.nodes.push(p);
         result
@@ -675,13 +678,13 @@ fn linked_list_add_contour<T: Float + Display>(
     if start > data.len() || end > data.len() || data.is_empty() {
         return (NULL, NULL);
     }
-    let mut lastidx = NULL;
-    let mut leftmost_idx = NULL;
+    let mut lastidx = None;
+    let mut leftmost_idx = None;
     let mut contour_minx = T::max_value();
 
     if clockwise == (signed_area(data, start, end) > T::zero()) {
         for i in (start..end).step_by(DIM) {
-            lastidx = ll.insert_node(i / DIM, data[i], data[i + 1], lastidx);
+            lastidx = Some(ll.insert_node(i / DIM, data[i], data[i + 1], lastidx));
             if contour_minx > data[i] {
                 contour_minx = data[i];
                 leftmost_idx = lastidx
@@ -694,7 +697,7 @@ fn linked_list_add_contour<T: Float + Display>(
         }
     } else {
         for i in (start..=(end - DIM)).rev().step_by(DIM) {
-            lastidx = ll.insert_node(i / DIM, data[i], data[i + 1], lastidx);
+            lastidx = Some(ll.insert_node(i / DIM, data[i], data[i + 1], lastidx));
             if contour_minx > data[i] {
                 contour_minx = data[i];
                 leftmost_idx = lastidx
@@ -709,11 +712,11 @@ fn linked_list_add_contour<T: Float + Display>(
 
     ll.minx = T::min(contour_minx, ll.minx);
 
-    if equals(&ll.nodes[lastidx], nextref!(ll, lastidx)) {
-        ll.remove_node(lastidx);
-        lastidx = ll.nodes[lastidx].next_idx;
+    if equals(&ll.nodes[lastidx.unwrap()], nextref!(ll, lastidx.unwrap())) {
+        ll.remove_node(lastidx.unwrap());
+        lastidx = Some(ll.nodes[lastidx.unwrap()].next_idx);
     }
-    (lastidx, leftmost_idx)
+    (lastidx.unwrap(), leftmost_idx.unwrap())
 }
 
 // z-order of a point given coords and inverse of the longer side of
@@ -1753,17 +1756,17 @@ mod tests {
     fn test_find_hole_bridge() {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let hole_idx = ll.insert_node(0, 0.8, 0.8, NULL);
+        let hole_idx = ll.insert_node(0, 0.8, 0.8, None);
         assert!(1 == find_hole_bridge(&ll, hole_idx, 1));
 
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.4, 0.5];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let hole_idx = ll.insert_node(0, 0.5, 0.5, NULL);
+        let hole_idx = ll.insert_node(0, 0.5, 0.5, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
 
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -0.4, 0.5];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let hole_idx = ll.insert_node(0, 0.5, 0.5, NULL);
+        let hole_idx = ll.insert_node(0, 0.5, 0.5, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
 
         let m = vec![
@@ -1771,29 +1774,29 @@ mod tests {
             0.5,
         ];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let hole_idx = ll.insert_node(0, 0.5, 0.9, NULL);
+        let hole_idx = ll.insert_node(0, 0.5, 0.9, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.1, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.1, None);
         assert!(9 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.5, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.5, None);
         assert!(9 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.55, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.55, None);
         assert!(9 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.6, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.6, None);
         assert!(8 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.65, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.65, None);
         assert!(7 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.7, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.7, None);
         assert!(7 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.75, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.75, None);
         assert!(7 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.8, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.8, None);
         assert!(6 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.85, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.85, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.9, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.9, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
-        let hole_idx = ll.insert_node(0, 0.2, 0.95, NULL);
+        let hole_idx = ll.insert_node(0, 0.2, 0.95, None);
         assert!(5 == find_hole_bridge(&ll, hole_idx, 1));
     }
 
