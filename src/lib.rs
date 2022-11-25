@@ -617,18 +617,22 @@ fn filter_points<T: Float + Display>(
     loop {
         again = false;
         if !node!(ll, p).steiner
-            && (equals(&ll.nodes[p], nextref!(ll, p))
-                || area(prevref!(ll, p), &ll.nodes[p], nextref!(ll, p)) == zero)
+            && (equals(&ll.nodes[p], &ll.nodes[ll.nodes[p].next_idx])
+                || area(
+                    &ll.nodes[ll.nodes[p].prev_idx],
+                    &ll.nodes[p],
+                    &ll.nodes[ll.nodes[p].next_idx],
+                ) == zero)
         {
             ll.remove_node(p);
-            end = node!(ll, p).prev_idx;
+            end = ll.nodes[p].prev_idx;
             p = end;
-            if p == node!(ll, p).next_idx {
+            if p == ll.nodes[p].next_idx {
                 break end;
             }
             again = true;
         } else {
-            p = node!(ll, p).next_idx;
+            p = ll.nodes[p].next_idx;
         }
         if !again && p == end {
             break end;
