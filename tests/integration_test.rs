@@ -333,3 +333,23 @@ fn test_bad_diagonals() {
 fn test_issue83() {
     assert!(area_test("issue83", 0, 1e-14));
 }
+
+#[test]
+fn test_infinite_loop_jhl() {
+    assert!(area_test("infinite-loop-jhl", 0, 1e-14));
+}
+
+#[test]
+fn test_filtered_bridge_jhl() {
+    assert!(area_test("filtered-bridge-jhl", 0, 1e-14));
+}
+
+#[test]
+fn test_issue142() {
+    assert!(area_test("issue142", 0, 1e-14));
+}
+
+#[test]
+fn test_issue149() {
+    assert!(area_test("issue149", 0, 1e-14));
+}
