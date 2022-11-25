@@ -299,7 +299,7 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
 fn earcut_linked_hashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: NodeIdx,
-    triangles: &mut Vec<usize>,
+    triangle_indices: &mut TriangleIndices,
     pass: usize,
 ) {
     // interlink polygon nodes in z-order
@@ -314,9 +314,11 @@ fn earcut_linked_hashed<T: Float + Display>(
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
         if is_ear_hashed(ll, prev_idx, ear_idx, next_idx) {
-            triangles.push(node!(ll, prev_idx).i);
-            triangles.push(node!(ll, ear_idx).i);
-            triangles.push(node!(ll, next_idx).i);
+            triangle_indices.push(
+                node!(ll, prev_idx).i,
+                node!(ll, ear_idx).i,
+                node!(ll, next_idx).i,
+            );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
             ear_idx = node!(ll, next_idx).next_idx;
@@ -333,12 +335,12 @@ fn earcut_linked_hashed<T: Float + Display>(
     // find any more ears
     if pass == 0 {
         let tmp = filter_points(ll, next_idx, NULL);
-        earcut_linked_hashed(ll, tmp, triangles, 1);
+        earcut_linked_hashed(ll, tmp, triangle_indices, 1);
     } else if pass == 1 {
-        ear_idx = cure_local_intersections(ll, next_idx, triangles);
-        earcut_linked_hashed(ll, ear_idx, triangles, 2);
+        ear_idx = cure_local_intersections(ll, next_idx, triangle_indices);
+        earcut_linked_hashed(ll, ear_idx, triangle_indices, 2);
     } else if pass == 2 {
-        split_earcut(ll, next_idx, triangles);
+        split_earcut(ll, next_idx, triangle_indices);
     }
 }
 
@@ -347,7 +349,7 @@ fn earcut_linked_hashed<T: Float + Display>(
 fn earcut_linked_unhashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: NodeIdx,
-    triangles: &mut Vec<usize>,
+    triangles: &mut TriangleIndices,
     pass: usize,
 ) {
     // iterate through ears, slicing them one by one
@@ -358,9 +360,11 @@ fn earcut_linked_unhashed<T: Float + Display>(
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
         if is_ear(ll, prev_idx, ear_idx, next_idx) {
-            triangles.push(node!(ll, prev_idx).i);
-            triangles.push(node!(ll, ear_idx).i);
-            triangles.push(node!(ll, next_idx).i);
+            triangles.push(
+                node!(ll, prev_idx).i,
+                node!(ll, ear_idx).i,
+                node!(ll, next_idx).i,
+            );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
             ear_idx = node!(ll, next_idx).next_idx;
@@ -632,6 +636,10 @@ fn filter_points<T: Float + Display>(
             }
             again = true;
         } else {
+            debug_assert!(
+                p != ll.nodes[p].next_idx,
+                "the next node cannot be the current node"
+            );
             p = ll.nodes[p].next_idx;
         }
         if !again && p == end {
@@ -741,6 +749,17 @@ fn point_in_triangle<T: Float + Display>(
         && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
 }
 
+#[derive(Default, Debug)]
+struct TriangleIndices(Vec<usize>);
+
+impl TriangleIndices {
+    fn push(&mut self, a: usize, b: usize, c: usize) {
+        self.0.push(a);
+        self.0.push(b);
+        self.0.push(c);
+    }
+}
+
 pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
     let outer_len = match hole_indices.len() {
         0 => data.len(),
@@ -748,9 +767,9 @@ pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usiz
     };
 
     let (mut ll, mut outer_node) = linked_list(data, 0, outer_len, true);
-    let mut triangles: Vec<usize> = Vec::with_capacity(data.len() / DIM);
+    let mut triangles = TriangleIndices(Vec::with_capacity(data.len() / DIM));
     if ll.nodes.len() == 1 || DIM != dims {
-        return triangles;
+        return triangles.0;
     }
 
     outer_node = eliminate_holes(&mut ll, data, hole_indices, outer_node);
@@ -771,7 +790,7 @@ pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usiz
         earcut_linked_unhashed(&mut ll, outer_node, &mut triangles, 0);
     }
 
-    triangles
+    triangles.0
 }
 
 // signed area of a parallelogram
@@ -796,7 +815,7 @@ algorithm itself.*/
 fn cure_local_intersections<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     instart: NodeIdx,
-    triangles: &mut Vec<NodeIdx>,
+    triangles: &mut TriangleIndices,
 ) -> NodeIdx {
     let mut p = instart;
     let mut start = instart;
@@ -831,9 +850,7 @@ fn cure_local_intersections<T: Float + Display>(
             && locally_inside(ll, &ll.nodes[a], &ll.nodes[b])
             && locally_inside(ll, &ll.nodes[b], &ll.nodes[a])
         {
-            triangles.push(ll.nodes[a].i);
-            triangles.push(ll.nodes[p].i);
-            triangles.push(ll.nodes[b].i);
+            triangles.push(ll.nodes[a].i, ll.nodes[p].i, ll.nodes[b].i);
 
             // remove two nodes involved
             ll.remove_node(p);
@@ -856,7 +873,7 @@ fn cure_local_intersections<T: Float + Display>(
 fn split_earcut<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     start_idx: NodeIdx,
-    triangles: &mut Vec<NodeIdx>,
+    triangles: &mut TriangleIndices,
 ) {
     // look for a valid diagonal that divides the polygon into two
     let mut a = start_idx;
@@ -1603,21 +1620,21 @@ mod tests {
     fn test_earcut_linked() {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (Vec::new(), 0);
+        let (mut tris, pass) = (TriangleIndices::default(), 0);
         earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
-        assert!(tris.len() == 6);
+        assert!(tris.0.len() == 6);
 
         let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (Vec::new(), 0);
+        let (mut tris, pass) = (TriangleIndices::default(), 0);
         earcut_linked_unhashed(&mut ll, 1, &mut tris, pass);
-        assert!(tris.len() == 9);
+        assert!(tris.0.len() == 9);
 
         let m = vec![0.0, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (Vec::new(), 0);
+        let (mut tris, pass) = (TriangleIndices::default(), 0);
         earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
-        assert!(tris.len() == 9);
+        assert!(tris.0.len() == 9);
     }
 
     #[test]
@@ -1888,19 +1905,19 @@ mod tests {
             0.0, 0.0, 1.0, 0.0, 1.1, 0.1, 0.9, 0.1, 1.0, 0.05, 1.0, 1.0, 0.0, 1.0,
         ];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let mut triangles: Vec<usize> = Vec::new();
+        let mut triangles = TriangleIndices::default();
         cure_local_intersections(&mut ll, 0, &mut triangles);
         assert!(cycle_len(&ll, 1) == 7);
-        assert!(triangles.is_empty());
+        assert!(triangles.0.is_empty());
 
         // second test - we have three points that immediately cause
         // self intersection. so it should, in theory, detect and clean
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.1, 0.1, 1.1, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let mut triangles: Vec<usize> = Vec::new();
+        let mut triangles = TriangleIndices::default();
         cure_local_intersections(&mut ll, 1, &mut triangles);
         assert!(cycle_len(&ll, 1) == 4);
-        assert!(triangles.len() == 3);
+        assert!(triangles.0.len() == 3);
     }
 
     #[test]
@@ -1909,9 +1926,9 @@ mod tests {
 
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
         let start = 1;
-        let mut triangles: Vec<usize> = Vec::new();
+        let mut triangles = TriangleIndices::default();
         split_earcut(&mut ll, start, &mut triangles);
-        assert!(triangles.len() == 6);
+        assert!(triangles.0.len() == 6);
         assert!(ll.nodes.len() == 7);
 
         let m = vec![
@@ -1920,7 +1937,7 @@ mod tests {
         ];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
         let start = 1;
-        let mut triangles: Vec<usize> = Vec::new();
+        let mut triangles = TriangleIndices::default();
         split_earcut(&mut ll, start, &mut triangles);
         assert!(ll.nodes.len() == 13);
     }
@@ -1974,13 +1991,23 @@ mod tests {
         assert!(triangles.len() > 4);
     }
 
-    /*
-    Infinite loop
     #[test]
-    fn test_foo() {
-        let coords = [3482952.0523706395, -2559865.184587028, 3482952.0523706395, -2559865.184587028, 3856285.4462009706, -1347264.3952299273, 3856285.4462009706, -1347264.3952299273, 3864938.7972431043, -1358303.0608723268, 3864938.7972431043, -1358303.0608723268];
+    fn test_infinite_loop_bug() {
+        let coords = [
+            3482952.0523706395,
+            -2559865.184587028,
+            3482952.0523706395,
+            -2559865.184587028,
+            3856285.4462009706,
+            -1347264.3952299273,
+            3856285.4462009706,
+            -1347264.3952299273,
+            3864938.7972431043,
+            -1358303.0608723268,
+            3864938.7972431043,
+            -1358303.0608723268,
+        ];
         let hole_indices = [2, 4];
         earcut(&coords, &hole_indices, DIM);
     }
-    */
 }
