@@ -1992,4 +1992,14 @@ mod tests {
         let triangles = earcut(&coords, &hole_indices, DIM);
         assert!(triangles.len() > 4);
     }
+
+    /*
+    Infinite loop
+    #[test]
+    fn test_foo() {
+        let coords = [3482952.0523706395, -2559865.184587028, 3482952.0523706395, -2559865.184587028, 3856285.4462009706, -1347264.3952299273, 3856285.4462009706, -1347264.3952299273, 3864938.7972431043, -1358303.0608723268, 3864938.7972431043, -1358303.0608723268];
+        let hole_indices = [2, 4];
+        earcut(&coords, &hole_indices, DIM);
+    }
+    */
 }
