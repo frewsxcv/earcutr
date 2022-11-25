@@ -437,7 +437,7 @@ fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: NodeIdx) {
             qsize = insize;
 
             while psize > 0 || (qsize > 0 && q != NULL) {
-                if psize > 0 && (qsize == 0 || q == NULL || &ll.nodes[p].z <= &ll.nodes[q].z)
+                if psize > 0 && (qsize == 0 || q == NULL || ll.nodes[p].z <= ll.nodes[q].z)
                 {
                     e = p;
                     p = ll.nodes[p].nextz_idx;
@@ -860,7 +860,7 @@ fn split_earcut<T: Float + Display>(
     loop {
         let mut b = next!(ll, a).next_idx;
         while b != ll.nodes[a].prev_idx {
-            if &ll.nodes[a].i != &ll.nodes[b].i
+            if ll.nodes[a].i != ll.nodes[b].i
                 && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b])
             {
                 // split the polygon in two by the diagonal
