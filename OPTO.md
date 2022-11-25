@@ -514,7 +514,7 @@ they are never used.
 
 ```rust
     while p!=NULL && node!(ll, p).z >= min_z {
-        if earcheck(&a,&b,&c,prevref!(ll, p),noderef!(ll, p),nextref!(ll, p),
+        if earcheck(&a,&b,&c,prevref!(ll, p),&ll.nodes[p],nextref!(ll, p),
         ) {
             return false;
         }
@@ -528,7 +528,7 @@ millions of times for a polygon with a few thousand points. Here is how:
 ```rust
     nodemut!(ll, NULL).z = min_z - 1;
     while node!(ll, p).z >= min_z {
-        if earcheck(&a,&b,&c,prevref!(ll, p),noderef!(ll, p),nextref!(ll, p),
+        if earcheck(&a,&b,&c,prevref!(ll, p),&ll.nodes[p],nextref!(ll, p),
         ) {
             return false;
         }
@@ -567,11 +567,11 @@ loop vs iterator tests i did before:
 fn intersects_polygon(ll: &LinkedLists, a: &Node, b: &Node) -> bool {
     let mut p = a.idx;
     loop {
-        if noderef!(ll, p).i != a.i
+        if &ll.nodes[p].i != a.i
             && next!(ll, p).i != a.i
-            && noderef!(ll, p).i != b.i
+            && &ll.nodes[p].i != b.i
             && next!(ll, p).i != b.i
-            && pseudo_intersects(noderef!(ll, p), nextref!(ll, p), a, b)
+            && pseudo_intersects(&ll.nodes[p], nextref!(ll, p), a, b)
         {
             return true;
         }
@@ -748,7 +748,7 @@ The original code is something like this:
 
 ```rust
     loop {
-        let (px, py) = (noderef!(ll, p).x, noderef!(ll, p).y);
+        let (px, py) = (&ll.nodes[p].x, &ll.nodes[p].y);
         if (hy <= py) && (hy >= next!(ll, p).y) && (next!(ll, p).y != py) {
             let x = px + (hy - py) * (next!(ll, p).x - px) / (next!(ll, p).y - p
 y);
@@ -790,12 +790,12 @@ Pulling the same trick with the bottom of the same function... uhm.. yeah.
 before:
 ```rust
     while p != stop {
-        let (px, py) = (noderef!(ll, p).x, noderef!(ll, p).y);
-        if (hx >= px) && (px >= mx) && (hx != px) && point_in_triangle(&n1, &mp, &n2, noderef!(ll, p))
+        let (px, py) = (&ll.nodes[p].x, &ll.nodes[p].y);
+        if (hx >= px) && (px >= mx) && (hx != px) && point_in_triangle(&n1, &mp, &n2, &ll.nodes[p])
         {
             tan = (hy - py).abs() / (hx - px); // tangential
-            if ((tan < tan_min) || ((tan == tan_min) && (px > noderef!(ll, m).x)))
-                && locally_inside(ll, noderef!(ll, p), &hole)
+            if ((tan < tan_min) || ((tan == tan_min) && (px > &ll.nodes[m].x)))
+                && locally_inside(ll, &ll.nodes[p], &hole)
             {
                 m = p;
                 tan_min = tan;
@@ -813,8 +813,8 @@ after:
         .filter(|p| hx > p.x && p.x >= mp.x)
                 .filter(|p| point_in_triangle(&n1, &mp, &n2, &p))
         .fold((m, std::f64::INFINITY), |(m, tan_min), p| {
-            if ((calctan(p) < tan_min) || (calctan(p) == tan_min && p.x > noderef!(ll, m).x))
-                && locally_inside(ll, &p, noderef!(ll, hole))
+            if ((calctan(p) < tan_min) || (calctan(p) == tan_min && p.x > &ll.nodes[m].x))
+                && locally_inside(ll, &p, &ll.nodes[hole])
             {
                 (p.idx, calctan(p))
             } else {
