@@ -281,7 +281,7 @@ fn eliminate_holes<T: Float + Display>(
     for node in queue {
         eliminate_hole(ll, node.idx, outer_node);
         let nextidx = next!(ll, outer_node).idx;
-        outer_node = filter_points(ll, outer_node, nextidx);
+        outer_node = filter_points(ll, outer_node, Some(nextidx));
     }
     outer_node
 } // elim holes
@@ -337,7 +337,7 @@ fn earcut_linked_hashed<T: Float + Display>(
     // if we looped through the whole remaining polygon and can't
     // find any more ears
     if pass == 0 {
-        let tmp = filter_points(ll, next_idx, NULL);
+        let tmp = filter_points(ll, next_idx, None);
         earcut_linked_hashed(ll, tmp, triangle_indices, 1);
     } else if pass == 1 {
         ear_idx = cure_local_intersections(ll, next_idx, triangle_indices);
@@ -383,7 +383,7 @@ fn earcut_linked_unhashed<T: Float + Display>(
     // if we looped through the whole remaining polygon and can't
     // find any more ears
     if pass == 0 {
-        let tmp = filter_points(ll, next_idx, NULL);
+        let tmp = filter_points(ll, next_idx, None);
         earcut_linked_unhashed(ll, tmp, triangles, 1);
     } else if pass == 1 {
         ear_idx = cure_local_intersections(ll, next_idx, triangles);
@@ -601,15 +601,13 @@ fn is_ear_hashed<T: Float + Display>(
 fn filter_points<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     start: NodeIdx,
-    mut end: NodeIdx,
+    end: Option<NodeIdx>,
 ) -> NodeIdx {
     dlog!(
         4,
         "fn filter_points, eliminate colinear or duplicate points"
     );
-    if end == NULL {
-        end = start;
-    }
+    let mut end = end.unwrap_or(start);
     if end >= ll.nodes.len() || start >= ll.nodes.len() {
         return NULL;
     }
@@ -890,8 +888,8 @@ fn split_earcut<T: Float + Display>(
                 // filter colinear points around the cuts
                 let an = ll.nodes[a].next_idx;
                 let cn = ll.nodes[c].next_idx;
-                a = filter_points(ll, a, an);
-                c = filter_points(ll, c, cn);
+                a = filter_points(ll, a, Some(an));
+                c = filter_points(ll, c, Some(cn));
 
                 // run earcut on each half
                 earcut_linked_hashed(ll, a, triangles, 0);
@@ -917,7 +915,7 @@ fn eliminate_hole<T: Float + Display>(
     let test_idx = find_hole_bridge(ll, hole_idx, outer_node_idx);
     let b = split_bridge_polygon(ll, test_idx, hole_idx);
     let ni = node!(ll, b).next_idx;
-    filter_points(ll, b, ni);
+    filter_points(ll, b, Some(ni));
 }
 
 // David Eberly's algorithm for finding a bridge between hole and outer polygon
@@ -1590,7 +1588,7 @@ mod tests {
         let lllen = ll.nodes.len();
         println!("len {}", ll.nodes.len());
         println!("{}", dump(&ll));
-        let r1 = filter_points(&mut ll, 1, lllen - 1);
+        let r1 = filter_points(&mut ll, 1, Some(lllen - 1));
         println!("{}", dump(&ll));
         println!("r1 {} cyclen {}", r1, cycle_len(&ll, r1));
         assert!(cycle_len(&ll, r1) == 4);
@@ -1598,24 +1596,24 @@ mod tests {
         let n = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
         let (mut ll, _) = linked_list(&n, 0, n.len(), true);
         let lllen = ll.nodes.len();
-        let r2 = filter_points(&mut ll, 1, lllen - 1);
+        let r2 = filter_points(&mut ll, 1, Some(lllen - 1));
         assert!(cycle_len(&ll, r2) == 4);
 
         let n2 = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
         let (mut ll, _) = linked_list(&n2, 0, n2.len(), true);
-        let r32 = filter_points(&mut ll, 1, 99);
+        let r32 = filter_points(&mut ll, 1, Some(99));
         assert!(cycle_len(&ll, r32) != 4);
 
         let o = vec![0.0, 0.0, 0.25, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.5, 0.5];
         let (mut ll, _) = linked_list(&o, 0, o.len(), true);
         let lllen = ll.nodes.len();
-        let r3 = filter_points(&mut ll, 1, lllen - 1);
+        let r3 = filter_points(&mut ll, 1, Some(lllen - 1));
         assert!(cycle_len(&ll, r3) == 3);
 
         let o = vec![0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
         let (mut ll, _) = linked_list(&o, 0, o.len(), true);
         let lllen = ll.nodes.len();
-        let r3 = filter_points(&mut ll, 1, lllen - 1);
+        let r3 = filter_points(&mut ll, 1, Some(lllen - 1));
         assert!(cycle_len(&ll, r3) == 5);
     }
 
