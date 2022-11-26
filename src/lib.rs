@@ -846,8 +846,10 @@ pub fn earcut<T: Float + Display>(
         // floating point space is not evenly spaced, but it is close enough for
         // this hash algorithm
         let (mx, my) = (ll.minx, ll.miny);
-        ll.nodes.iter_mut().for_each(|n| n.x = n.x - mx);
-        ll.nodes.iter_mut().for_each(|n| n.y = n.y - my);
+        ll.nodes.iter_mut().for_each(|n| {
+            n.x = n.x - mx;
+            n.y = n.y - my;
+        });
         earcut_linked_hashed(&mut ll, outer_node, &mut triangles, 0);
     } else {
         earcut_linked_unhashed(&mut ll, outer_node, &mut triangles, 0);
