@@ -1509,6 +1509,12 @@ mod tests {
     }
 
     #[test]
+    fn test_empty() {
+        let result = earcut::<f32>(&[], &[], 2);
+        assert_eq!(result, []);
+    }
+
+    #[test]
     fn test_linked_list() {
         let vertices = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
         let (mut ll, _) = linked_list(&vertices, 0, vertices.len(), true);
