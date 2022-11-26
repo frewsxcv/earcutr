@@ -288,7 +288,7 @@ fn eliminate_holes<T: Float + Display>(
         if list == Some(ll.nodes[list.unwrap()].next_idx) {
             nodemut!(ll, list.unwrap()).is_steiner_point = true;
         }
-        queue.push(node!(ll, leftmost_idx.unwrap()).clone());
+        queue.push(*node!(ll, leftmost_idx.unwrap()));
     }
 
     queue.sort_by(compare_x);
@@ -1534,8 +1534,8 @@ mod tests {
         //        ll.iter(1..2)
         //.zip(ll.iter(2..3))
         ll.iter_pairs(1..2).for_each(|(p, n)| {
-            v.push(p.clone());
-            v.push(n.clone());
+            v.push(*p);
+            v.push(*n);
         });
         println!("{:?}", v);
         //		assert!(false);
