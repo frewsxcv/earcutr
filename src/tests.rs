@@ -171,7 +171,7 @@ fn horsh_ll<T: num_traits::float::Float + std::fmt::Display>(
 #[test]
 fn test_empty() {
     let result = earcut::<f32>(&[], &[], 2);
-    assert_eq!(result, []);
+    assert_eq!(result, &[] as &[usize]);
 }
 
 #[test]
@@ -214,12 +214,7 @@ fn test_iter_pairs() {
 fn test_point_in_triangle() {
     let vertices = vec![0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 1.0, 0.1];
     let (ll, _) = linked_list(&vertices, 0, vertices.len(), true);
-    assert!(point_in_triangle(
-        ll.nodes[1],
-        ll.nodes[2],
-        ll.nodes[3],
-        ll.nodes[4]
-    ));
+    assert!(NodeTriangle(ll.nodes[1], ll.nodes[2], ll.nodes[3],).contains_point(ll.nodes[4]));
 }
 
 #[test]

@@ -526,13 +526,9 @@ impl NodeIndexTriangle {
             false => !ll
                 .iter(self.next_node(ll).next_linked_list_node_index..self.prev_node(ll).idx)
                 .any(|p| {
-                    point_in_triangle(
-                        self.prev_node(ll),
-                        self.ear_node(ll),
-                        self.next_node(ll),
-                        *p,
-                    ) && (NodeTriangle(*prevref!(ll, p.idx), *p, *nextref!(ll, p.idx)).area()
-                        >= zero)
+                    self.node_triangle(ll).contains_point(*p)
+                        && (NodeTriangle(*prevref!(ll, p.idx), *p, *nextref!(ll, p.idx)).area()
+                            >= zero)
                 }),
         }
     }
@@ -556,6 +552,19 @@ impl<T: Float + Display> NodeTriangle<T> {
         let r = self.2;
         // signed area of a parallelogram
         (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
+    }
+
+    // check if a point lies within a convex triangle
+    fn contains_point(&self, p: LinkedListNode<T>) -> bool {
+        let zero = T::zero();
+
+        let a = self.0;
+        let b = self.1;
+        let c = self.2;
+
+        ((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= zero)
+            && ((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= zero)
+            && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
     }
 
     #[inline(always)]
@@ -651,7 +660,7 @@ fn earcheck<T: Float + Display>(
 
     (p.idx != a.idx)
         && (p.idx != c.idx)
-        && point_in_triangle(*a, *b, *c, *p)
+        && NodeTriangle(*a, *b, *c).contains_point(*p)
         && NodeTriangle(*prev, *p, *next).area() >= zero
 }
 
@@ -791,20 +800,6 @@ fn zorder<T: Float + Display>(xf: T, yf: T, invsize: T) -> i32 {
     xy = (xy | (xy << 1)) & 0x5555555555555555;
 
     ((xy >> 32) | (xy << 1)) as i32
-}
-
-// check if a point lies within a convex triangle
-fn point_in_triangle<T: Float + Display>(
-    a: LinkedListNode<T>,
-    b: LinkedListNode<T>,
-    c: LinkedListNode<T>,
-    p: LinkedListNode<T>,
-) -> bool {
-    let zero = T::zero();
-
-    ((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= zero)
-        && ((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= zero)
-        && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
 }
 
 struct VerticesIndexTriangle(usize, usize, usize);
@@ -1039,7 +1034,7 @@ fn find_hole_bridge<T: Float + Display>(
     let calctan = |p: &LinkedListNode<T>| (hy - p.y).abs() / (hx - p.x); // tangential
     ll.iter(p..m)
         .filter(|p| hx > p.x && p.x >= mp.x)
-        .filter(|p| point_in_triangle(n1, mp, n2, **p))
+        .filter(|p| NodeTriangle(n1, mp, n2).contains_point(**p))
         .fold((m, T::max_value() / two), |(m, tan_min), p| {
             if ((calctan(p) < tan_min) || (calctan(p) == tan_min && p.x > ll.nodes[m].x))
                 && locally_inside(ll, p, &ll.nodes[hole])
