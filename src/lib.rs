@@ -808,6 +808,10 @@ impl FinalTriangleIndices {
 }
 
 pub fn earcut<T: Float + Display>(vertices: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
+    if vertices.is_empty() {
+        return vec![];
+    }
+
     let outer_len = match hole_indices.len() {
         0 => vertices.len(),
         _ => hole_indices[0] * DIM,
