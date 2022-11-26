@@ -262,13 +262,14 @@ fn eliminate_holes<T: Float + Display>(
     let mut outer_node = inouter_node;
     let mut queue: Vec<Node<T>> = Vec::new();
     for i in 0..hole_indices.len() {
-        let start = hole_indices[i] * DIM;
-        let end = if i < (hole_indices.len() - 1) {
+        let data_hole_start_index = hole_indices[i] * DIM;
+        let data_hole_end_index = if i < (hole_indices.len() - 1) {
             hole_indices[i + 1] * DIM
         } else {
             data.len()
         };
-        let (list, leftmost_idx) = linked_list_add_contour(ll, data, start, end, false);
+        let (list, leftmost_idx) =
+            linked_list_add_contour(ll, data, data_hole_start_index, data_hole_end_index, false);
         if list == Some(ll.nodes[list.unwrap()].next_idx) {
             nodemut!(ll, list.unwrap()).steiner = true;
         }
