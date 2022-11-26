@@ -11,22 +11,32 @@ type VertIdx = usize;
 
 #[derive(Clone, Debug)]
 struct Node<T: Float + Display> {
-    i: VertIdx,         // vertex index in flat one-d array of 64bit float coords
-    x: T,               // vertex x coordinate
-    y: T,               // vertex y coordinate
-    prev_idx: NodeIdx,  // previous vertex node in a polygon ring
-    next_idx: NodeIdx,  // next vertex node in a polygon ring
-    z: i32,             // z-order curve value
-    prevz_idx: NodeIdx, // previous node in z-order
-    nextz_idx: NodeIdx, // next node in z-order
-    steiner: bool,      // indicates whether this is a steiner point
-    idx: NodeIdx,       // index within LinkedLists vector that holds all nodes
+    /// vertex index in flat one-d array of 64bit float coords
+    data_index: VertIdx,
+    /// vertex x coordinate
+    x: T,
+    /// vertex y coordinate
+    y: T,
+    /// previous vertex node in a polygon ring
+    prev_idx: NodeIdx,
+    /// next vertex node in a polygon ring
+    next_idx: NodeIdx,
+    /// z-order curve value
+    z: i32,
+    /// previous node in z-order
+    prevz_idx: NodeIdx,
+    /// next node in z-order
+    nextz_idx: NodeIdx,
+    /// indicates whether this is a steiner point
+    is_steiner_point: bool,
+    /// index within LinkedLists vector that holds all nodes
+    idx: NodeIdx,
 }
 
 impl<T: Float + Display> Node<T> {
     fn new(i: VertIdx, x: T, y: T, idx: NodeIdx) -> Node<T> {
         Node {
-            i,
+            data_index: i,
             x,
             y,
             prev_idx: NULL,
@@ -34,7 +44,7 @@ impl<T: Float + Display> Node<T> {
             z: 0,
             nextz_idx: NULL,
             prevz_idx: NULL,
-            steiner: false,
+            is_steiner_point: false,
             idx,
         }
     }
@@ -171,7 +181,7 @@ impl<T: Float + Display> LinkedLists<T> {
         };
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
         ll.nodes.push(Node {
-            i: 0,
+            data_index: 0,
             x: T::zero(),
             y: T::zero(),
             prev_idx: 0,
@@ -179,7 +189,7 @@ impl<T: Float + Display> LinkedLists<T> {
             z: 0,
             nextz_idx: 0,
             prevz_idx: 0,
-            steiner: false,
+            is_steiner_point: false,
             idx: 0,
         });
         ll
@@ -276,7 +286,7 @@ fn eliminate_holes<T: Float + Display>(
         let (list, leftmost_idx) =
             linked_list_add_contour(ll, data, data_hole_start_index, data_hole_end_index, false);
         if list == Some(ll.nodes[list.unwrap()].next_idx) {
-            nodemut!(ll, list.unwrap()).steiner = true;
+            nodemut!(ll, list.unwrap()).is_steiner_point = true;
         }
         queue.push(node!(ll, leftmost_idx.unwrap()).clone());
     }
@@ -302,6 +312,8 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
     }
 }
 
+struct Triangle(NodeIdx, NodeIdx, NodeIdx);
+
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
 fn earcut_linked_hashed<T: Float + Display>(
@@ -323,9 +335,9 @@ fn earcut_linked_hashed<T: Float + Display>(
         next_idx = node!(ll, ear_idx).next_idx;
         if is_ear_hashed(ll, prev_idx, ear_idx, next_idx) {
             triangle_indices.push(
-                node!(ll, prev_idx).i,
-                node!(ll, ear_idx).i,
-                node!(ll, next_idx).i,
+                node!(ll, prev_idx).data_index,
+                node!(ll, ear_idx).data_index,
+                node!(ll, next_idx).data_index,
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -369,9 +381,9 @@ fn earcut_linked_unhashed<T: Float + Display>(
         next_idx = node!(ll, ear_idx).next_idx;
         if is_ear(ll, prev_idx, ear_idx, next_idx) {
             triangles.push(
-                node!(ll, prev_idx).i,
-                node!(ll, ear_idx).i,
-                node!(ll, next_idx).i,
+                node!(ll, prev_idx).data_index,
+                node!(ll, ear_idx).data_index,
+                node!(ll, next_idx).data_index,
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -625,13 +637,14 @@ fn filter_points<T: Float + Display>(
     // the algorithm of other code that calls the filter_points function.
     loop {
         again = false;
-        if !node!(ll, p).steiner
+        if !node!(ll, p).is_steiner_point
             && (ll.nodes[p].xy_eq(&ll.nodes[ll.nodes[p].next_idx])
                 || area(
                     &ll.nodes[ll.nodes[p].prev_idx],
                     &ll.nodes[p],
                     &ll.nodes[ll.nodes[p].next_idx],
-                ).is_zero())
+                )
+                .is_zero())
         {
             ll.remove_node(p);
             end = ll.nodes[p].prev_idx;
@@ -850,7 +863,11 @@ fn cure_local_intersections<T: Float + Display>(
             && locally_inside(ll, &ll.nodes[a], &ll.nodes[b])
             && locally_inside(ll, &ll.nodes[b], &ll.nodes[a])
         {
-            triangles.push(ll.nodes[a].i, ll.nodes[p].i, ll.nodes[b].i);
+            triangles.push(
+                ll.nodes[a].data_index,
+                ll.nodes[p].data_index,
+                ll.nodes[b].data_index,
+            );
 
             // remove two nodes involved
             ll.remove_node(p);
@@ -880,7 +897,9 @@ fn split_earcut<T: Float + Display>(
     loop {
         let mut b = next!(ll, a).next_idx;
         while b != ll.nodes[a].prev_idx {
-            if ll.nodes[a].i != ll.nodes[b].i && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b]) {
+            if ll.nodes[a].data_index != ll.nodes[b].data_index
+                && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b])
+            {
                 // split the polygon in two by the diagonal
                 let mut c = split_bridge_polygon(ll, a, b);
 
@@ -990,8 +1009,8 @@ fn find_hole_bridge<T: Float + Display>(
 // check if a diagonal between two polygon nodes is valid (lies in
 // polygon interior)
 fn is_valid_diagonal<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
-    return next!(ll, a.idx).i != b.i
-        && prev!(ll, a.idx).i != b.i
+    return next!(ll, a.idx).data_index != b.data_index
+        && prev!(ll, a.idx).data_index != b.data_index
         && !intersects_polygon(ll, a, b)
         && locally_inside(ll, a, b)
         && locally_inside(ll, b, a)
@@ -1046,7 +1065,11 @@ fn pseudo_intersects<T: Float + Display>(
 // check if a polygon diagonal intersects any polygon segments
 fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
     ll.iter_pairs(a.idx..a.idx).any(|(p, n)| {
-        p.i != a.i && n.i != a.i && p.i != b.i && n.i != b.i && pseudo_intersects(p, n, a, b)
+        p.data_index != a.data_index
+            && n.data_index != a.data_index
+            && p.data_index != b.data_index
+            && n.data_index != b.data_index
+            && pseudo_intersects(p, n, a, b)
     })
 }
 
@@ -1151,8 +1174,8 @@ fn split_bridge_polygon<T: Float + Display>(
 ) -> NodeIdx {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = Node::new(ll.nodes[a].i, ll.nodes[a].x, ll.nodes[a].y, cidx);
-    let mut d = Node::new(ll.nodes[b].i, ll.nodes[b].x, ll.nodes[b].y, didx);
+    let mut c = Node::new(ll.nodes[a].data_index, ll.nodes[a].x, ll.nodes[a].y, cidx);
+    let mut d = Node::new(ll.nodes[b].data_index, ll.nodes[b].x, ll.nodes[b].y, didx);
 
     let an = ll.nodes[a].next_idx;
     let bp = ll.nodes[b].prev_idx;
@@ -1262,14 +1285,14 @@ fn dump<T: Float + Display>(ll: &LinkedLists<T>) -> String {
         s.push_str(&format!(
             " {:>3} {:>3} {:>4} {:>4} {:>8.3} {:>8.3} {:>4} {:>4} {:>2} {:>2} {:>2} {:>4}\n",
             n.idx,
-            n.i,
+            n.data_index,
             pn(n.prev_idx),
             pn(n.next_idx),
             n.x,
             n.y,
             pn(n.prevz_idx),
             pn(n.nextz_idx),
-            pb(n.steiner),
+            pb(n.is_steiner_point),
             false,
             //            pb(ll.freelist.contains(&n.idx)),
             0, //,ll.iter(n.idx..n.idx).count(),
@@ -1289,7 +1312,7 @@ fn cycle_dump<T: Float + Display>(ll: &LinkedLists<T>, p: NodeIdx) -> String {
     loop {
         count += 1;
         s.push_str(&format!("{} ", &ll.nodes[i].idx));
-        s.push_str(&format!("(i:{}), ", &ll.nodes[i].i));
+        s.push_str(&format!("(i:{}), ", &ll.nodes[i].data_index));
         i = ll.nodes[i].next_idx;
         if i == end {
             break s;
@@ -1351,7 +1374,7 @@ mod tests {
         ));
         let mut startidx: usize = 0;
         for n in &ll.nodes {
-            if n.i == start {
+            if n.data_index == start {
                 startidx = n.idx;
             };
         }
@@ -1366,14 +1389,14 @@ mod tests {
                 " {:>3} {:>3} {:>3} {:>4} {:>4} {:>8.3} {:>8.3} {:>4} {:>4} {:>2} {:>2} {:>2}\n",
                 count,
                 n.idx,
-                n.i,
-                prev!(ll, n.idx).i,
-                next!(ll, n.idx).i,
+                n.data_index,
+                prev!(ll, n.idx).data_index,
+                next!(ll, n.idx).data_index,
                 n.x,
                 n.y,
                 pn(n.prevz_idx),
                 pn(n.nextz_idx),
-                pb(n.steiner),
+                pb(n.is_steiner_point),
                 //                pb(ll.freelist.contains(&n.idx)),
                 false,
                 cycle_len(ll, n.idx),
@@ -1434,7 +1457,7 @@ mod tests {
         let mut s = "LL horsh: ".to_string();
         let mut startidx: usize = 0;
         for n in &ll.nodes {
-            if n.i == starti {
+            if n.data_index == starti {
                 startidx = n.idx;
             };
         }
@@ -1444,7 +1467,7 @@ mod tests {
         let mut state = 0u32;
         loop {
             let n = &ll.nodes[idx].clone();
-            state = horsh(state, n.i as u32);
+            state = horsh(state, n.data_index as u32);
             idx = next!(ll, idx).idx;
             count += 1;
             if idx == endidx || count > ll.nodes.len() {
@@ -1461,8 +1484,8 @@ mod tests {
         let (mut ll, _) = linked_list(&data, 0, data.len(), true);
         assert!(ll.nodes.len() == 5);
         assert!(ll.nodes[1].idx == 1);
-        assert!(ll.nodes[1].i == 6 / DIM);
-        assert!(ll.nodes[1].i == 3);
+        assert!(ll.nodes[1].data_index == 6 / DIM);
+        assert!(ll.nodes[1].data_index == 3);
         assert!(ll.nodes[1].x == 1.0);
         assert!(ll.nodes[1].y == 0.0);
         assert!(ll.nodes[1].next_idx == 2 && ll.nodes[1].prev_idx == 4);
