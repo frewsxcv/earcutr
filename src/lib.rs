@@ -325,11 +325,14 @@ fn earcut_linked_hashed<T: Float + Display>(
     while stop_idx != next_idx {
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
-        if is_ear_hashed(ll, prev_idx, ear_idx, next_idx) {
+        let node_index_triangle = NodeIndexTriangle(prev_idx, ear_idx, next_idx);
+        if is_ear_hashed(ll, node_index_triangle.node_triangle(ll)) {
             triangle_indices.push(
-                node!(ll, prev_idx).vertices_index,
-                node!(ll, ear_idx).vertices_index,
-                node!(ll, next_idx).vertices_index,
+                VerticesIndexTriangle(
+                    node!(ll, prev_idx).vertices_index,
+                    node!(ll, ear_idx).vertices_index,
+                    node!(ll, next_idx).vertices_index,
+                )
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -373,9 +376,11 @@ fn earcut_linked_unhashed<T: Float + Display>(
         next_idx = node!(ll, ear_idx).next_idx;
         if NodeIndexTriangle(prev_idx, ear_idx, next_idx).is_ear(ll) {
             triangles.push(
-                node!(ll, prev_idx).vertices_index,
-                node!(ll, ear_idx).vertices_index,
-                node!(ll, next_idx).vertices_index,
+                VerticesIndexTriangle(
+                    node!(ll, prev_idx).vertices_index,
+                    node!(ll, ear_idx).vertices_index,
+                    node!(ll, next_idx).vertices_index,
+                )
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -561,20 +566,14 @@ fn earcheck<T: Float + Display>(
 #[inline(always)]
 fn is_ear_hashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    prev_idx: NodeIdx,
-    ear_idx: NodeIdx,
-    next_idx: NodeIdx,
+    node_triangle: NodeTriangle<T>,
 ) -> bool {
-    let (prev, ear, next) = (
-        &node!(ll, prev_idx).clone(),
-        &node!(ll, ear_idx).clone(),
-        &node!(ll, next_idx).clone(),
-    );
     let zero = T::zero();
 
-    if NodeTriangle(*prev, *ear, *next).area() >= zero {
+    if node_triangle.area() >= zero {
         return false;
     };
+    let NodeTriangle(prev, ear, next) = node_triangle;
 
     let bbox_maxx = T::max(prev.x, T::max(ear.x, next.x));
     let bbox_maxy = T::max(prev.y, T::max(ear.y, next.y));
@@ -588,9 +587,9 @@ fn is_ear_hashed<T: Float + Display>(
     let mut n = ear.nextz_idx;
     while (p != NULL) && (node!(ll, p).z >= min_z) && (n != NULL) && (node!(ll, n).z <= max_z) {
         if earcheck(
-            prev,
-            ear,
-            next,
+            &prev,
+            &ear,
+            &next,
             prevref!(ll, p),
             &ll.nodes[p],
             nextref!(ll, p),
@@ -600,9 +599,9 @@ fn is_ear_hashed<T: Float + Display>(
         p = node!(ll, p).prevz_idx;
 
         if earcheck(
-            prev,
-            ear,
-            next,
+            &prev,
+            &ear,
+            &next,
             prevref!(ll, n),
             &ll.nodes[n],
             nextref!(ll, n),
@@ -615,9 +614,9 @@ fn is_ear_hashed<T: Float + Display>(
     nodemut!(ll, NULL).z = min_z - 1;
     while node!(ll, p).z >= min_z {
         if earcheck(
-            prev,
-            ear,
-            next,
+            &prev,
+            &ear,
+            &next,
             prevref!(ll, p),
             &ll.nodes[p],
             nextref!(ll, p),
@@ -630,9 +629,9 @@ fn is_ear_hashed<T: Float + Display>(
     nodemut!(ll, NULL).z = max_z + 1;
     while node!(ll, n).z <= max_z {
         if earcheck(
-            prev,
-            ear,
-            next,
+            &prev,
+            &ear,
+            &next,
             prevref!(ll, n),
             &ll.nodes[n],
             nextref!(ll, n),
@@ -796,14 +795,16 @@ fn point_in_triangle<T: Float + Display>(a: Node<T>, b: Node<T>, c: Node<T>, p: 
         && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
 }
 
+struct VerticesIndexTriangle(usize, usize, usize);
+
 #[derive(Default, Debug)]
 struct FinalTriangleIndices(Vec<usize>);
 
 impl FinalTriangleIndices {
-    fn push(&mut self, a: usize, b: usize, c: usize) {
-        self.0.push(a);
-        self.0.push(b);
-        self.0.push(c);
+    fn push(&mut self, vertices_index_triangle: VerticesIndexTriangle) {
+        self.0.push(vertices_index_triangle.0);
+        self.0.push(vertices_index_triangle.1);
+        self.0.push(vertices_index_triangle.2);
     }
 }
 
@@ -892,9 +893,11 @@ fn cure_local_intersections<T: Float + Display>(
             && locally_inside(ll, &ll.nodes[b], &ll.nodes[a])
         {
             triangles.push(
-                ll.nodes[a].vertices_index,
-                ll.nodes[p].vertices_index,
-                ll.nodes[b].vertices_index,
+                VerticesIndexTriangle(
+                    ll.nodes[a].vertices_index,
+                    ll.nodes[p].vertices_index,
+                    ll.nodes[b].vertices_index,
+                )
             );
 
             // remove two nodes involved
