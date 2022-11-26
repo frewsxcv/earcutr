@@ -50,7 +50,7 @@ impl<T: Float + Display> Node<T> {
     }
 
     // check if two points are equal
-    fn xy_eq(&self, other: &Node<T>) -> bool {
+    fn xy_eq(&self, other: Node<T>) -> bool {
         self.x == other.x && self.y == other.y
     }
 }
@@ -99,7 +99,7 @@ macro_rules! next {
 macro_rules! nextref {
     ($ll:expr,$idx:expr) => {
         unsafe {
-            &$ll.nodes
+            $ll.nodes
                 .get_unchecked($ll.nodes.get_unchecked($idx).next_idx)
         }
         //&$ll.nodes[$ll.nodes[$idx].next_idx]
@@ -117,7 +117,7 @@ macro_rules! prev {
 macro_rules! prevref {
     ($ll:expr,$idx:expr) => {
         unsafe {
-            &$ll.nodes
+            $ll.nodes
                 .get_unchecked($ll.nodes.get_unchecked($idx).prev_idx)
         }
         //&$ll.nodes[$ll.nodes[$idx].prev_idx]
@@ -519,10 +519,16 @@ impl NodeIndexTriangle {
         let zero = T::zero();
         match self.area(ll) >= zero {
             true => false, // reflex, cant be ear
-            false => !ll.iter(self.next_node(ll).next_idx..self.prev_node(ll).idx).any(|p| {
-                point_in_triangle(self.prev_node(ll), self.ear_node(ll), self.next_node(ll), *p)
-                    && (area(prevref!(ll, p.idx), p, nextref!(ll, p.idx)) >= zero)
-            }),
+            false => !ll
+                .iter(self.next_node(ll).next_idx..self.prev_node(ll).idx)
+                .any(|p| {
+                    point_in_triangle(
+                        self.prev_node(ll),
+                        self.ear_node(ll),
+                        self.next_node(ll),
+                        *p,
+                    ) && (NodeTriangle(*prevref!(ll, p.idx), *p, *nextref!(ll, p.idx)).area() >= zero)
+                }),
         }
     }
 }
@@ -555,7 +561,7 @@ fn earcheck<T: Float + Display>(
     (p.idx != a.idx)
         && (p.idx != c.idx)
         && point_in_triangle(*a, *b, *c, *p)
-        && area(prev, p, next) >= zero
+        && NodeTriangle(*prev, *p, *next).area() >= zero
 }
 
 #[inline(always)]
@@ -572,7 +578,7 @@ fn is_ear_hashed<T: Float + Display>(
     );
     let zero = T::zero();
 
-    if area(prev, ear, next) >= zero {
+    if NodeTriangle(*prev, *ear, *next).area() >= zero {
         return false;
     };
 
@@ -668,12 +674,13 @@ fn filter_points<T: Float + Display>(
     loop {
         again = false;
         if !node!(ll, p).is_steiner_point
-            && (ll.nodes[p].xy_eq(&ll.nodes[ll.nodes[p].next_idx])
-                || area(
-                    &ll.nodes[ll.nodes[p].prev_idx],
-                    &ll.nodes[p],
-                    &ll.nodes[ll.nodes[p].next_idx],
+            && (ll.nodes[p].xy_eq(ll.nodes[ll.nodes[p].next_idx])
+                || NodeTriangle(
+                    ll.nodes[ll.nodes[p].prev_idx],
+                    ll.nodes[p],
+                    ll.nodes[ll.nodes[p].next_idx],
                 )
+                .area()
                 .is_zero())
         {
             ll.remove_node(p);
@@ -757,7 +764,7 @@ fn linked_list_add_contour<T: Float + Display>(
 
     ll.minx = T::min(contour_minx, ll.minx);
 
-    if ll.nodes[lastidx.unwrap()].xy_eq(nextref!(ll, lastidx.unwrap())) {
+    if ll.nodes[lastidx.unwrap()].xy_eq(*nextref!(ll, lastidx.unwrap())) {
         ll.remove_node(lastidx.unwrap());
         lastidx = Some(ll.nodes[lastidx.unwrap()].next_idx);
     }
@@ -784,12 +791,7 @@ fn zorder<T: Float + Display>(xf: T, yf: T, invsize: T) -> i32 {
 }
 
 // check if a point lies within a convex triangle
-fn point_in_triangle<T: Float + Display>(
-    a: Node<T>,
-    b: Node<T>,
-    c: Node<T>,
-    p: Node<T>,
-) -> bool {
+fn point_in_triangle<T: Float + Display>(a: Node<T>, b: Node<T>, c: Node<T>, p: Node<T>) -> bool {
     let zero = T::zero();
 
     ((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= zero)
@@ -877,12 +879,12 @@ fn cure_local_intersections<T: Float + Display>(
         let a = node!(ll, p).prev_idx;
         let b = next!(ll, p).next_idx;
 
-        if !ll.nodes[a].xy_eq(&ll.nodes[b])
+        if !ll.nodes[a].xy_eq(ll.nodes[b])
             && pseudo_intersects(
-                &ll.nodes[a],
-                &ll.nodes[p],
-                nextref!(ll, p),
-                &ll.nodes[b],
+                ll.nodes[a],
+                ll.nodes[p],
+                *nextref!(ll, p),
+                ll.nodes[b],
             )
 			// prev next a, prev next b
             && locally_inside(ll, &ll.nodes[a], &ll.nodes[b])
@@ -1036,7 +1038,7 @@ fn find_hole_bridge<T: Float + Display>(
 fn is_valid_diagonal<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
     return next!(ll, a.idx).data_index != b.data_index
         && prev!(ll, a.idx).data_index != b.data_index
-        && !intersects_polygon(ll, a, b)
+        && !intersects_polygon(ll, *a, *b)
         && locally_inside(ll, a, b)
         && locally_inside(ll, b, a)
         && middle_inside(ll, a, b);
@@ -1073,42 +1075,44 @@ detection for endpoint detection.
 */
 
 fn pseudo_intersects<T: Float + Display>(
-    p1: &Node<T>,
-    q1: &Node<T>,
-    p2: &Node<T>,
-    q2: &Node<T>,
+    p1: Node<T>,
+    q1: Node<T>,
+    p2: Node<T>,
+    q2: Node<T>,
 ) -> bool {
     if (p1.xy_eq(p2) && q1.xy_eq(q2)) || (p1.xy_eq(q2) && q1.xy_eq(p2)) {
         return true;
     }
     let zero = T::zero();
 
-    (area(p1, q1, p2) > zero) != (area(p1, q1, q2) > zero)
-        && (area(p2, q2, p1) > zero) != (area(p2, q2, q1) > zero)
+    (NodeTriangle(p1, q1, p2).area() > zero) != (NodeTriangle(p1, q1, q2).area() > zero)
+        && (NodeTriangle(p2, q2, p1).area() > zero) != (NodeTriangle(p2, q2, q1).area() > zero)
 }
 
 // check if a polygon diagonal intersects any polygon segments
-fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
+fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: Node<T>, b: Node<T>) -> bool {
     ll.iter_pairs(a.idx..a.idx).any(|(p, n)| {
         p.data_index != a.data_index
             && n.data_index != a.data_index
             && p.data_index != b.data_index
             && n.data_index != b.data_index
-            && pseudo_intersects(p, n, a, b)
+            && pseudo_intersects(*p, *n, a, b)
     })
-}
-
-fn area<T: Float + Display>(p: &Node<T>, q: &Node<T>, r: &Node<T>) -> T {
-    (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
 }
 
 // check if a polygon diagonal is locally inside the polygon
 fn locally_inside<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
     let zero = T::zero();
 
-    match area(prevref!(ll, a.idx), a, nextref!(ll, a.idx)) < zero {
-        true => area(a, b, nextref!(ll, a.idx)) >= zero && area(a, prevref!(ll, a.idx), b) >= zero,
-        false => area(a, b, prevref!(ll, a.idx)) < zero || area(a, nextref!(ll, a.idx), b) < zero,
+    match NodeTriangle(*prevref!(ll, a.idx), *a, *nextref!(ll, a.idx)).area() < zero {
+        true => {
+            NodeTriangle(*a, *b, *nextref!(ll, a.idx)).area() >= zero
+                && NodeTriangle(*a, *prevref!(ll, a.idx), *b).area() >= zero
+        }
+        false => {
+            NodeTriangle(*a, *b, *prevref!(ll, a.idx)).area() < zero
+                || NodeTriangle(*a, *nextref!(ll, a.idx), *b).area() < zero
+        }
     }
 }
 
@@ -1587,22 +1591,22 @@ mod tests {
     fn test_equals() {
         let body = vec![0.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&body, 0, body.len(), true);
-        assert!(ll.nodes[1].xy_eq(&ll.nodes[2]));
+        assert!(ll.nodes[1].xy_eq(ll.nodes[2]));
 
         let body = vec![2.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&body, 0, body.len(), true);
-        assert!(!ll.nodes[1].xy_eq(&ll.nodes[2]));
+        assert!(!ll.nodes[1].xy_eq(ll.nodes[2]));
     }
 
     #[test]
     fn test_area() {
         let body = vec![4.0, 0.0, 4.0, 3.0, 0.0, 0.0]; // counterclockwise
         let (ll, _) = linked_list(&body, 0, body.len(), true);
-        assert!(area(&ll.nodes[1], &ll.nodes[2], &ll.nodes[3]) == -12.0);
+        assert!(NodeTriangle(ll.nodes[1], ll.nodes[2], ll.nodes[3]).area() == -12.0);
         let body2 = vec![4.0, 0.0, 0.0, 0.0, 4.0, 3.0]; // clockwise
         let (ll2, _) = linked_list(&body2, 0, body2.len(), true);
         // creation apparently modifies all winding to ccw
-        assert!(area(&ll2.nodes[1], &ll2.nodes[2], &ll2.nodes[3]) == -12.0);
+        assert!(NodeTriangle(ll2.nodes[1], ll2.nodes[2], ll2.nodes[3]).area() == -12.0);
     }
 
     #[test]
@@ -1721,16 +1725,16 @@ mod tests {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
 
-        assert!(!intersects_polygon(&ll, &ll.nodes[0], &ll.nodes[2]));
-        assert!(!intersects_polygon(&ll, &ll.nodes[2], &ll.nodes[0]));
-        assert!(!intersects_polygon(&ll, &ll.nodes[1], &ll.nodes[3]));
-        assert!(!intersects_polygon(&ll, &ll.nodes[3], &ll.nodes[1]));
+        assert!(!intersects_polygon(&ll, ll.nodes[0], ll.nodes[2]));
+        assert!(!intersects_polygon(&ll, ll.nodes[2], ll.nodes[0]));
+        assert!(!intersects_polygon(&ll, ll.nodes[1], ll.nodes[3]));
+        assert!(!intersects_polygon(&ll, ll.nodes[3], ll.nodes[1]));
 
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.9, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
         dlog!(9, "{}", dump(&ll));
-        dlog!(5, "{}", intersects_polygon(&ll, &ll.nodes[0], &ll.nodes[2]));
-        dlog!(5, "{}", intersects_polygon(&ll, &ll.nodes[2], &ll.nodes[0]));
+        dlog!(5, "{}", intersects_polygon(&ll, ll.nodes[0], ll.nodes[2]));
+        dlog!(5, "{}", intersects_polygon(&ll, ll.nodes[2], ll.nodes[0]));
     }
 
     #[test]
@@ -1741,10 +1745,10 @@ mod tests {
             ($ok:expr,$a:expr,$b:expr,$c:expr,$d:expr) => {
                 assert!(
                     $ok == pseudo_intersects(
-                        &ll.nodes[$a],
-                        &ll.nodes[$b],
-                        &ll.nodes[$c],
-                        &ll.nodes[$d]
+                        ll.nodes[$a],
+                        ll.nodes[$b],
+                        ll.nodes[$c],
+                        ll.nodes[$d]
                     )
                 );
             };
@@ -1769,18 +1773,18 @@ mod tests {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.9, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
         assert!(!pseudo_intersects(
-            &ll.nodes[4],
-            &ll.nodes[5],
-            &ll.nodes[1],
-            &ll.nodes[3]
+            ll.nodes[4],
+            ll.nodes[5],
+            ll.nodes[1],
+            ll.nodes[3]
         ));
 
         // special case
         assert!(pseudo_intersects(
-            &ll.nodes[4],
-            &ll.nodes[5],
-            &ll.nodes[3],
-            &ll.nodes[1]
+            ll.nodes[4],
+            ll.nodes[5],
+            ll.nodes[3],
+            ll.nodes[1]
         ));
     }
 
