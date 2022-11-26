@@ -6,11 +6,11 @@ static NULL: usize = 0;
 //static DEBUG: usize = 4;
 static DEBUG: usize = 0; // dlogs get optimized away at 0
 
-type NodeIdx = usize;
+type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
 
 #[derive(Clone, Copy, Debug)]
-struct Node<T: Float + Display> {
+struct LinkedListNode<T: Float + Display> {
     /// vertex index in flat one-d array of 64bit float coords
     vertices_index: VerticesIndex,
     /// vertex x coordinate
@@ -18,24 +18,24 @@ struct Node<T: Float + Display> {
     /// vertex y coordinate
     y: T,
     /// previous vertex node in a polygon ring
-    prev_idx: NodeIdx,
+    prev_idx: LinkedListNodeIndex,
     /// next vertex node in a polygon ring
-    next_idx: NodeIdx,
+    next_idx: LinkedListNodeIndex,
     /// z-order curve value
     z: i32,
     /// previous node in z-order
-    prevz_idx: NodeIdx,
+    prevz_idx: LinkedListNodeIndex,
     /// next node in z-order
-    nextz_idx: NodeIdx,
+    nextz_idx: LinkedListNodeIndex,
     /// indicates whether this is a steiner point
     is_steiner_point: bool,
     /// index within LinkedLists vector that holds all nodes
-    idx: NodeIdx,
+    idx: LinkedListNodeIndex,
 }
 
-impl<T: Float + Display> Node<T> {
-    fn new(i: VerticesIndex, x: T, y: T, idx: NodeIdx) -> Node<T> {
-        Node {
+impl<T: Float + Display> LinkedListNode<T> {
+    fn new(i: VerticesIndex, x: T, y: T, idx: LinkedListNodeIndex) -> LinkedListNode<T> {
+        LinkedListNode {
             vertices_index: i,
             x,
             y,
@@ -50,13 +50,13 @@ impl<T: Float + Display> Node<T> {
     }
 
     // check if two points are equal
-    fn xy_eq(&self, other: Node<T>) -> bool {
+    fn xy_eq(&self, other: LinkedListNode<T>) -> bool {
         self.x == other.x && self.y == other.y
     }
 }
 
 pub struct LinkedLists<T: Float + Display> {
-    nodes: Vec<Node<T>>,
+    nodes: Vec<LinkedListNode<T>>,
     invsize: T,
     minx: T,
     miny: T,
@@ -128,14 +128,20 @@ macro_rules! prevz {
 }
 
 impl<T: Float + Display> LinkedLists<T> {
-    fn iter(&self, r: std::ops::Range<NodeIdx>) -> NodeIterator<T> {
+    fn iter(&self, r: std::ops::Range<LinkedListNodeIndex>) -> NodeIterator<T> {
         return NodeIterator::new(self, r.start, r.end);
     }
-    fn iter_pairs(&self, r: std::ops::Range<NodeIdx>) -> NodePairIterator<T> {
+    fn iter_pairs(&self, r: std::ops::Range<LinkedListNodeIndex>) -> NodePairIterator<T> {
         return NodePairIterator::new(self, r.start, r.end);
     }
-    fn insert_node(&mut self, i: VerticesIndex, x: T, y: T, last: Option<NodeIdx>) -> NodeIdx {
-        let mut p = Node::new(i, x, y, self.nodes.len());
+    fn insert_node(
+        &mut self,
+        i: VerticesIndex,
+        x: T,
+        y: T,
+        last: Option<LinkedListNodeIndex>,
+    ) -> LinkedListNodeIndex {
+        let mut p = LinkedListNode::new(i, x, y, self.nodes.len());
         match last {
             None => {
                 p.next_idx = p.idx;
@@ -153,7 +159,7 @@ impl<T: Float + Display> LinkedLists<T> {
         self.nodes.push(p);
         result
     }
-    fn remove_node(&mut self, p_idx: NodeIdx) {
+    fn remove_node(&mut self, p_idx: LinkedListNodeIndex) {
         let pi = self.nodes[p_idx].prev_idx;
         let ni = self.nodes[p_idx].next_idx;
         let pz = self.nodes[p_idx].prevz_idx;
@@ -174,7 +180,7 @@ impl<T: Float + Display> LinkedLists<T> {
             usehash: true,
         };
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
-        ll.nodes.push(Node {
+        ll.nodes.push(LinkedListNode {
             vertices_index: 0,
             x: T::zero(),
             y: T::zero(),
@@ -191,14 +197,18 @@ impl<T: Float + Display> LinkedLists<T> {
 }
 
 struct NodeIterator<'a, T: Float + Display> {
-    cur: NodeIdx,
-    end: NodeIdx,
+    cur: LinkedListNodeIndex,
+    end: LinkedListNodeIndex,
     ll: &'a LinkedLists<T>,
-    pending_result: Option<&'a Node<T>>,
+    pending_result: Option<&'a LinkedListNode<T>>,
 }
 
 impl<'a, T: Float + Display> NodeIterator<'a, T> {
-    fn new(ll: &LinkedLists<T>, start: NodeIdx, end: NodeIdx) -> NodeIterator<T> {
+    fn new(
+        ll: &LinkedLists<T>,
+        start: LinkedListNodeIndex,
+        end: LinkedListNodeIndex,
+    ) -> NodeIterator<T> {
         NodeIterator {
             pending_result: Some(&ll.nodes[start]),
             cur: start,
@@ -209,7 +219,7 @@ impl<'a, T: Float + Display> NodeIterator<'a, T> {
 }
 
 impl<'a, T: Float + Display> Iterator for NodeIterator<'a, T> {
-    type Item = &'a Node<T>;
+    type Item = &'a LinkedListNode<T>;
     fn next(&mut self) -> Option<Self::Item> {
         self.cur = self.ll.nodes[self.cur].next_idx;
         let cur_result = self.pending_result;
@@ -224,14 +234,18 @@ impl<'a, T: Float + Display> Iterator for NodeIterator<'a, T> {
 }
 
 struct NodePairIterator<'a, T: Float + Display> {
-    cur: NodeIdx,
-    end: NodeIdx,
+    cur: LinkedListNodeIndex,
+    end: LinkedListNodeIndex,
     ll: &'a LinkedLists<T>,
-    pending_result: Option<(&'a Node<T>, &'a Node<T>)>,
+    pending_result: Option<(&'a LinkedListNode<T>, &'a LinkedListNode<T>)>,
 }
 
 impl<'a, T: Float + Display> NodePairIterator<'a, T> {
-    fn new(ll: &LinkedLists<T>, start: NodeIdx, end: NodeIdx) -> NodePairIterator<T> {
+    fn new(
+        ll: &LinkedLists<T>,
+        start: LinkedListNodeIndex,
+        end: LinkedListNodeIndex,
+    ) -> NodePairIterator<T> {
         NodePairIterator {
             pending_result: Some((&ll.nodes[start], nextref!(ll, start))),
             cur: start,
@@ -242,7 +256,7 @@ impl<'a, T: Float + Display> NodePairIterator<'a, T> {
 }
 
 impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
-    type Item = (&'a Node<T>, &'a Node<T>);
+    type Item = (&'a LinkedListNode<T>, &'a LinkedListNode<T>);
     fn next(&mut self) -> Option<Self::Item> {
         self.cur = node!(self.ll, self.cur).next_idx;
         let cur_result = self.pending_result;
@@ -256,7 +270,10 @@ impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
     }
 }
 
-fn compare_x<T: Float + Display>(a: &Node<T>, b: &Node<T>) -> std::cmp::Ordering {
+fn compare_x<T: Float + Display>(
+    a: &LinkedListNode<T>,
+    b: &LinkedListNode<T>,
+) -> std::cmp::Ordering {
     a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
 }
 
@@ -266,10 +283,10 @@ fn eliminate_holes<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     vertices: &[T],
     hole_indices: &[VerticesIndex],
-    inouter_node: NodeIdx,
-) -> NodeIdx {
+    inouter_node: LinkedListNodeIndex,
+) -> LinkedListNodeIndex {
     let mut outer_node = inouter_node;
-    let mut queue: Vec<Node<T>> = Vec::new();
+    let mut queue: Vec<LinkedListNode<T>> = Vec::new();
     for i in 0..hole_indices.len() {
         let vertices_hole_start_index = hole_indices[i] * DIM;
         let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
@@ -315,7 +332,7 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
 // list)
 fn earcut_linked_hashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    mut ear_idx: NodeIdx,
+    mut ear_idx: LinkedListNodeIndex,
     triangle_indices: &mut FinalTriangleIndices,
     pass: usize,
 ) {
@@ -366,7 +383,7 @@ fn earcut_linked_hashed<T: Float + Display>(
 // list)
 fn earcut_linked_unhashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    mut ear_idx: NodeIdx,
+    mut ear_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
     pass: usize,
 ) {
@@ -409,7 +426,7 @@ fn earcut_linked_unhashed<T: Float + Display>(
 }
 
 // interlink polygon nodes in z-order
-fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: NodeIdx) {
+fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: LinkedListNodeIndex) {
     let invsize = ll.invsize;
     let mut p = start;
     loop {
@@ -432,7 +449,7 @@ fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: NodeIdx) {
 
 // Simon Tatham's linked list merge sort algorithm
 // http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
-fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: NodeIdx) {
+fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: LinkedListNodeIndex) {
     let mut p;
     let mut q;
     let mut e;
@@ -491,18 +508,22 @@ fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: NodeIdx) {
 }
 
 #[derive(Clone, Copy)]
-struct NodeIndexTriangle(NodeIdx, NodeIdx, NodeIdx);
+struct NodeIndexTriangle(
+    LinkedListNodeIndex,
+    LinkedListNodeIndex,
+    LinkedListNodeIndex,
+);
 
 impl NodeIndexTriangle {
-    fn prev_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+    fn prev_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.0]
     }
 
-    fn ear_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+    fn ear_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.1]
     }
 
-    fn next_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+    fn next_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.2]
     }
 
@@ -535,7 +556,7 @@ impl NodeIndexTriangle {
 }
 
 #[derive(Clone, Copy)]
-struct NodeTriangle<T: Float + Display>(Node<T>, Node<T>, Node<T>);
+struct NodeTriangle<T: Float + Display>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>);
 
 impl<T: Float + Display> NodeTriangle<T> {
     fn area(&self) -> T {
@@ -628,12 +649,12 @@ impl<T: Float + Display> NodeTriangle<T> {
 // helper for is_ear_hashed. needs manual inline (rust 2018)
 #[inline(always)]
 fn earcheck<T: Float + Display>(
-    a: &Node<T>,
-    b: &Node<T>,
-    c: &Node<T>,
-    prev: &Node<T>,
-    p: &Node<T>,
-    next: &Node<T>,
+    a: &LinkedListNode<T>,
+    b: &LinkedListNode<T>,
+    c: &LinkedListNode<T>,
+    prev: &LinkedListNode<T>,
+    p: &LinkedListNode<T>,
+    next: &LinkedListNode<T>,
 ) -> bool {
     let zero = T::zero();
 
@@ -645,9 +666,9 @@ fn earcheck<T: Float + Display>(
 
 fn filter_points<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    start: NodeIdx,
-    end: Option<NodeIdx>,
-) -> NodeIdx {
+    start: LinkedListNodeIndex,
+    end: Option<LinkedListNodeIndex>,
+) -> LinkedListNodeIndex {
     dlog!(
         4,
         "fn filter_points, eliminate colinear or duplicate points"
@@ -702,7 +723,7 @@ fn linked_list<T: Float + Display>(
     start: usize,
     end: usize,
     clockwise: bool,
-) -> (LinkedLists<T>, NodeIdx) {
+) -> (LinkedLists<T>, LinkedListNodeIndex) {
     let mut ll: LinkedLists<T> = LinkedLists::new(vertices.len() / DIM);
     if vertices.len() < 80 {
         ll.usehash = false
@@ -718,7 +739,7 @@ fn linked_list_add_contour<T: Float + Display>(
     start: VerticesIndex,
     end: VerticesIndex,
     clockwise: bool,
-) -> (NodeIdx, NodeIdx) {
+) -> (LinkedListNodeIndex, LinkedListNodeIndex) {
     assert!(start <= vertices.len() && end <= vertices.len() && !vertices.is_empty());
     // Previous code:
     //
@@ -786,7 +807,12 @@ fn zorder<T: Float + Display>(xf: T, yf: T, invsize: T) -> i32 {
 }
 
 // check if a point lies within a convex triangle
-fn point_in_triangle<T: Float + Display>(a: Node<T>, b: Node<T>, c: Node<T>, p: Node<T>) -> bool {
+fn point_in_triangle<T: Float + Display>(
+    a: LinkedListNode<T>,
+    b: LinkedListNode<T>,
+    c: LinkedListNode<T>,
+    p: LinkedListNode<T>,
+) -> bool {
     let zero = T::zero();
 
     ((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= zero)
@@ -859,9 +885,9 @@ into the 'triangles' variable, thus this is part of the triangulation
 algorithm itself.*/
 fn cure_local_intersections<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    instart: NodeIdx,
+    instart: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
-) -> NodeIdx {
+) -> LinkedListNodeIndex {
     let mut p = instart;
     let mut start = instart;
 
@@ -921,7 +947,7 @@ fn cure_local_intersections<T: Float + Display>(
 // try splitting polygon into two and triangulate them independently
 fn split_earcut<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    start_idx: NodeIdx,
+    start_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
 ) {
     // look for a valid diagonal that divides the polygon into two
@@ -959,8 +985,8 @@ fn split_earcut<T: Float + Display>(
 // and and link it
 fn eliminate_hole<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    hole_idx: NodeIdx,
-    outer_node_idx: NodeIdx,
+    hole_idx: LinkedListNodeIndex,
+    outer_node_idx: LinkedListNodeIndex,
 ) {
     let test_idx = find_hole_bridge(ll, hole_idx, outer_node_idx);
     let b = split_bridge_polygon(ll, test_idx, hole_idx);
@@ -971,20 +997,21 @@ fn eliminate_hole<T: Float + Display>(
 // David Eberly's algorithm for finding a bridge between hole and outer polygon
 fn find_hole_bridge<T: Float + Display>(
     ll: &LinkedLists<T>,
-    hole: NodeIdx,
-    outer_node: NodeIdx,
-) -> NodeIdx {
+    hole: LinkedListNodeIndex,
+    outer_node: LinkedListNodeIndex,
+) -> LinkedListNodeIndex {
     let mut p = outer_node;
     let hx = node!(ll, hole).x;
     let hy = node!(ll, hole).y;
     let mut qx = T::neg_infinity();
-    let mut m: Option<NodeIdx> = None;
+    let mut m: Option<LinkedListNodeIndex> = None;
 
     // find a segment intersected by a ray from the hole's leftmost
     // point to the left; segment's endpoint with lesser x will be
     // potential connection point
-    let calcx =
-        |p: &Node<T>| p.x + (hy - p.y) * (next!(ll, p.idx).x - p.x) / (next!(ll, p.idx).y - p.y);
+    let calcx = |p: &LinkedListNode<T>| {
+        p.x + (hy - p.y) * (next!(ll, p.idx).x - p.x) / (next!(ll, p.idx).y - p.y)
+    };
     for (p, n) in ll
         .iter_pairs(p..outer_node)
         .filter(|(p, n)| hy <= p.y && hy >= n.y)
@@ -1014,15 +1041,15 @@ fn find_hole_bridge<T: Float + Display>(
     // a valid connection; otherwise choose the point of the minimum
     // angle with the ray as connection point
 
-    let mp = Node::new(0, node!(ll, m).x, node!(ll, m).y, 0);
+    let mp = LinkedListNode::new(0, node!(ll, m).x, node!(ll, m).y, 0);
     p = next!(ll, m).idx;
     let x1 = if hy < mp.y { hx } else { qx };
     let x2 = if hy < mp.y { qx } else { hx };
-    let n1 = Node::new(0, x1, hy, 0);
-    let n2 = Node::new(0, x2, hy, 0);
+    let n1 = LinkedListNode::new(0, x1, hy, 0);
+    let n2 = LinkedListNode::new(0, x2, hy, 0);
     let two = num_traits::cast::<f64, T>(2.).unwrap();
 
-    let calctan = |p: &Node<T>| (hy - p.y).abs() / (hx - p.x); // tangential
+    let calctan = |p: &LinkedListNode<T>| (hy - p.y).abs() / (hx - p.x); // tangential
     ll.iter(p..m)
         .filter(|p| hx > p.x && p.x >= mp.x)
         .filter(|p| point_in_triangle(n1, mp, n2, **p))
@@ -1040,7 +1067,11 @@ fn find_hole_bridge<T: Float + Display>(
 
 // check if a diagonal between two polygon nodes is valid (lies in
 // polygon interior)
-fn is_valid_diagonal<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
+fn is_valid_diagonal<T: Float + Display>(
+    ll: &LinkedLists<T>,
+    a: &LinkedListNode<T>,
+    b: &LinkedListNode<T>,
+) -> bool {
     return next!(ll, a.idx).vertices_index != b.vertices_index
         && prev!(ll, a.idx).vertices_index != b.vertices_index
         && !intersects_polygon(ll, *a, *b)
@@ -1080,10 +1111,10 @@ detection for endpoint detection.
 */
 
 fn pseudo_intersects<T: Float + Display>(
-    p1: Node<T>,
-    q1: Node<T>,
-    p2: Node<T>,
-    q2: Node<T>,
+    p1: LinkedListNode<T>,
+    q1: LinkedListNode<T>,
+    p2: LinkedListNode<T>,
+    q2: LinkedListNode<T>,
 ) -> bool {
     if (p1.xy_eq(p2) && q1.xy_eq(q2)) || (p1.xy_eq(q2) && q1.xy_eq(p2)) {
         return true;
@@ -1095,7 +1126,11 @@ fn pseudo_intersects<T: Float + Display>(
 }
 
 // check if a polygon diagonal intersects any polygon segments
-fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: Node<T>, b: Node<T>) -> bool {
+fn intersects_polygon<T: Float + Display>(
+    ll: &LinkedLists<T>,
+    a: LinkedListNode<T>,
+    b: LinkedListNode<T>,
+) -> bool {
     ll.iter_pairs(a.idx..a.idx).any(|(p, n)| {
         p.vertices_index != a.vertices_index
             && n.vertices_index != a.vertices_index
@@ -1106,7 +1141,11 @@ fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: Node<T>, b: No
 }
 
 // check if a polygon diagonal is locally inside the polygon
-fn locally_inside<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
+fn locally_inside<T: Float + Display>(
+    ll: &LinkedLists<T>,
+    a: &LinkedListNode<T>,
+    b: &LinkedListNode<T>,
+) -> bool {
     let zero = T::zero();
 
     match NodeTriangle(*prevref!(ll, a.idx), *a, *nextref!(ll, a.idx)).area() < zero {
@@ -1122,7 +1161,11 @@ fn locally_inside<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node
 }
 
 // check if the middle point of a polygon diagonal is inside the polygon
-fn middle_inside<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
+fn middle_inside<T: Float + Display>(
+    ll: &LinkedLists<T>,
+    a: &LinkedListNode<T>,
+    b: &LinkedListNode<T>,
+) -> bool {
     let two = num_traits::cast::<f64, T>(2.0).unwrap();
 
     let (mx, my) = ((a.x + b.x) / two, (a.y + b.y) / two);
@@ -1207,18 +1250,18 @@ Return value is the new node, at point 7.
 */
 fn split_bridge_polygon<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    a: NodeIdx,
-    b: NodeIdx,
-) -> NodeIdx {
+    a: LinkedListNodeIndex,
+    b: LinkedListNodeIndex,
+) -> LinkedListNodeIndex {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = Node::new(
+    let mut c = LinkedListNode::new(
         ll.nodes[a].vertices_index,
         ll.nodes[a].x,
         ll.nodes[a].y,
         cidx,
     );
-    let mut d = Node::new(
+    let mut d = LinkedListNode::new(
         ll.nodes[b].vertices_index,
         ll.nodes[b].x,
         ll.nodes[b].y,
@@ -1351,7 +1394,7 @@ fn dump<T: Float + Display>(ll: &LinkedLists<T>) -> String {
 }
 
 #[allow(dead_code)]
-fn cycle_dump<T: Float + Display>(ll: &LinkedLists<T>, p: NodeIdx) -> String {
+fn cycle_dump<T: Float + Display>(ll: &LinkedLists<T>, p: LinkedListNodeIndex) -> String {
     let mut s = format!("cycle from {}, ", p);
     s.push_str(&format!(" len {}, idxs:", 0)); //cycle_len(&ll, p)));
     let mut i = p;
@@ -1461,7 +1504,7 @@ mod tests {
 
     fn cycle_len<T: num_traits::float::Float + std::fmt::Display>(
         ll: &LinkedLists<T>,
-        p: NodeIdx,
+        p: LinkedListNodeIndex,
     ) -> usize {
         if p >= ll.nodes.len() {
             return 0;
@@ -1551,7 +1594,7 @@ mod tests {
     fn test_iter_pairs() {
         let vertices = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&vertices, 0, vertices.len(), true);
-        let mut v: Vec<Node<f32>> = Vec::new();
+        let mut v: Vec<LinkedListNode<f32>> = Vec::new();
         //        ll.iter(1..2)
         //.zip(ll.iter(2..3))
         ll.iter_pairs(1..2).for_each(|(p, n)| {
