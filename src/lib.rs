@@ -296,9 +296,8 @@ fn eliminate_holes<T: Float + Display>(
 // into integers for z-order calculation
 fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
     let invsize = T::max(maxx - minx, maxy - miny);
-    let zero = T::zero();
-    match invsize == zero {
-        true => zero,
+    match invsize.is_zero() {
+        true => T::zero(),
         false => num_traits::cast::<f64, T>(32767.0).unwrap() / invsize,
     }
 }
@@ -620,7 +619,6 @@ fn filter_points<T: Float + Display>(
 
     let mut p = start;
     let mut again;
-    let zero = T::zero();
 
     // this loop "wastes" calculations by going over the same points multiple
     // times. however, altering the location of the 'end' node can disrupt
@@ -633,7 +631,7 @@ fn filter_points<T: Float + Display>(
                     &ll.nodes[ll.nodes[p].prev_idx],
                     &ll.nodes[p],
                     &ll.nodes[ll.nodes[p].next_idx],
-                ) == zero)
+                ).is_zero())
         {
             ll.remove_node(p);
             end = ll.nodes[p].prev_idx;
@@ -1203,10 +1201,9 @@ pub fn deviation<T: Float + Display>(
             - (data[a] - data[b]) * (data[c + 1] - data[a + 1]))
             .abs()
     });
-    let zero = T::zero();
 
-    match polygon_area == zero && triangles_area == zero {
-        true => zero,
+    match polygon_area.is_zero() && triangles_area.is_zero() {
+        true => T::zero(),
         false => ((triangles_area - polygon_area) / polygon_area).abs(),
     }
 }
