@@ -674,8 +674,8 @@ fn filter_points<T: Float + Display>(
         if !node!(ll, p).is_steiner_point
             && (ll.nodes[p].xy_eq(ll.nodes[ll.nodes[p].next_linked_list_node_index])
                 || NodeTriangle::from_ear_node(ll.nodes[p], ll)
-                .area()
-                .is_zero())
+                    .area()
+                    .is_zero())
         {
             ll.remove_node(p);
             end = ll.nodes[p].prev_linked_list_node_index;
