@@ -76,11 +76,7 @@ macro_rules! node {
         $ll.nodes[$idx]
     };
 }
-macro_rules! nodemut {
-    ($ll:expr,$idx:expr) => {
-        $ll.nodes.get_mut($idx).unwrap()
-    };
-}
+
 // Note: none of the following macros work for Left-Hand-Side of assignment.
 macro_rules! next {
     ($ll:expr,$idx:expr) => {
@@ -132,8 +128,8 @@ impl<T: Float + Display> LinkedLists<T> {
                 p.next_linked_list_node_index = self.nodes[last].next_linked_list_node_index;
                 p.prev_linked_list_node_index = last;
                 let lastnextidx = self.nodes[last].next_linked_list_node_index;
-                nodemut!(self, lastnextidx).prev_linked_list_node_index = p.idx;
-                nodemut!(self, last).next_linked_list_node_index = p.idx;
+                self.nodes[lastnextidx].prev_linked_list_node_index = p.idx;
+                self.nodes[last].next_linked_list_node_index = p.idx;
             }
         }
         let result = p.idx;
@@ -145,10 +141,10 @@ impl<T: Float + Display> LinkedLists<T> {
         let ni = self.nodes[p_idx].next_linked_list_node_index;
         let pz = self.nodes[p_idx].prevz_idx;
         let nz = self.nodes[p_idx].nextz_idx;
-        nodemut!(self, pi).next_linked_list_node_index = ni;
-        nodemut!(self, ni).prev_linked_list_node_index = pi;
-        nodemut!(self, pz).nextz_idx = nz;
-        nodemut!(self, nz).prevz_idx = pz;
+        self.nodes[pi].next_linked_list_node_index = ni;
+        self.nodes[ni].prev_linked_list_node_index = pi;
+        self.nodes[pz].nextz_idx = nz;
+        self.nodes[nz].prevz_idx = pz;
     }
     fn new(size_hint: usize) -> LinkedLists<T> {
         let mut ll = LinkedLists {
@@ -283,7 +279,7 @@ fn eliminate_holes<T: Float + Display>(
             false,
         );
         if list == ll.nodes[list].next_linked_list_node_index {
-            nodemut!(ll, list).is_steiner_point = true;
+            ll.nodes[list].is_steiner_point = true;
         }
         queue.push(node!(ll, leftmost_idx));
     }
@@ -412,10 +408,10 @@ fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: LinkedListNod
     let mut p = start;
     loop {
         if node!(ll, p).z == 0 {
-            nodemut!(ll, p).z = zorder(node!(ll, p).x, node!(ll, p).y, invsize);
+            ll.nodes[p].z = zorder(node!(ll, p).x, node!(ll, p).y, invsize);
         }
-        nodemut!(ll, p).prevz_idx = node!(ll, p).prev_linked_list_node_index;
-        nodemut!(ll, p).nextz_idx = node!(ll, p).next_linked_list_node_index;
+        ll.nodes[p].prevz_idx = node!(ll, p).prev_linked_list_node_index;
+        ll.nodes[p].nextz_idx = node!(ll, p).next_linked_list_node_index;
         p = node!(ll, p).next_linked_list_node_index;
         if p == start {
             break;
@@ -423,8 +419,8 @@ fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: LinkedListNod
     }
 
     let pzi = prevz!(ll, start).idx;
-    nodemut!(ll, pzi).nextz_idx = NULL;
-    nodemut!(ll, start).prevz_idx = NULL;
+    ll.nodes[pzi].nextz_idx = NULL;
+    ll.nodes[start].prevz_idx = NULL;
     sort_linked(ll, start);
 }
 
@@ -468,19 +464,19 @@ fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: LinkedList
                 }
 
                 if tail != NULL {
-                    nodemut!(ll, tail).nextz_idx = e;
+                    ll.nodes[tail].nextz_idx = e;
                 } else {
                     list = e;
                 }
 
-                nodemut!(ll, e).prevz_idx = tail;
+                ll.nodes[e].prevz_idx = tail;
                 tail = e;
             }
 
             p = q;
         }
 
-        nodemut!(ll, tail).nextz_idx = NULL;
+        ll.nodes[tail].nextz_idx = NULL;
         insize *= 2;
         if nummerges <= 1 {
             break;
@@ -593,7 +589,7 @@ impl<T: Float + Display> NodeTriangle<T> {
             n = node!(ll, n).nextz_idx;
         }
 
-        nodemut!(ll, NULL).z = min_z - 1;
+        ll.nodes[NULL].z = min_z - 1;
         while node!(ll, p).z >= min_z {
             if earcheck(
                 prev,
@@ -608,7 +604,7 @@ impl<T: Float + Display> NodeTriangle<T> {
             p = node!(ll, p).prevz_idx;
         }
 
-        nodemut!(ll, NULL).z = max_z + 1;
+        ll.nodes[NULL].z = max_z + 1;
         while node!(ll, n).z <= max_z {
             if earcheck(
                 prev,
@@ -1252,16 +1248,16 @@ fn split_bridge_polygon<T: Float + Display>(
     let an = ll.nodes[a].next_linked_list_node_index;
     let bp = ll.nodes[b].prev_linked_list_node_index;
 
-    nodemut!(ll, a).next_linked_list_node_index = b;
-    nodemut!(ll, b).prev_linked_list_node_index = a;
+    ll.nodes[a].next_linked_list_node_index = b;
+    ll.nodes[b].prev_linked_list_node_index = a;
 
     c.next_linked_list_node_index = an;
-    nodemut!(ll, an).prev_linked_list_node_index = cidx;
+    ll.nodes[an].prev_linked_list_node_index = cidx;
 
     d.next_linked_list_node_index = cidx;
     c.prev_linked_list_node_index = didx;
 
-    nodemut!(ll, bp).next_linked_list_node_index = didx;
+    ll.nodes[bp].next_linked_list_node_index = didx;
     d.prev_linked_list_node_index = bp;
 
     ll.nodes.push(c);
