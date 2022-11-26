@@ -38,6 +38,11 @@ impl<T: Float + Display> Node<T> {
             idx,
         }
     }
+
+    // check if two points are equal
+    fn xy_eq(&self, other: &Node<T>) -> bool {
+        self.x == other.x && self.y == other.y
+    }
 }
 
 pub struct LinkedLists<T: Float + Display> {
@@ -623,7 +628,7 @@ fn filter_points<T: Float + Display>(
     loop {
         again = false;
         if !node!(ll, p).steiner
-            && (equals(&ll.nodes[p], &ll.nodes[ll.nodes[p].next_idx])
+            && (ll.nodes[p].xy_eq(&ll.nodes[ll.nodes[p].next_idx])
                 || area(
                     &ll.nodes[ll.nodes[p].prev_idx],
                     &ll.nodes[p],
@@ -711,7 +716,7 @@ fn linked_list_add_contour<T: Float + Display>(
 
     ll.minx = T::min(contour_minx, ll.minx);
 
-    if equals(&ll.nodes[lastidx.unwrap()], nextref!(ll, lastidx.unwrap())) {
+    if ll.nodes[lastidx.unwrap()].xy_eq(nextref!(ll, lastidx.unwrap())) {
         ll.remove_node(lastidx.unwrap());
         lastidx = Some(ll.nodes[lastidx.unwrap()].next_idx);
     }
@@ -800,11 +805,6 @@ fn area<T: Float + Display>(p: &Node<T>, q: &Node<T>, r: &Node<T>) -> T {
     (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
 }
 
-// check if two points are equal
-fn equals<T: Float + Display>(p1: &Node<T>, p2: &Node<T>) -> bool {
-    p1.x == p2.x && p1.y == p2.y
-}
-
 /* go through all polygon nodes and cure small local self-intersections
 what is a small local self-intersection? well, lets say you have four points
 a,b,c,d. now imagine you have three line segments, a-b, b-c, and c-d. now
@@ -841,7 +841,7 @@ fn cure_local_intersections<T: Float + Display>(
         let a = node!(ll, p).prev_idx;
         let b = next!(ll, p).next_idx;
 
-        if !equals(&ll.nodes[a], &ll.nodes[b])
+        if !ll.nodes[a].xy_eq(&ll.nodes[b])
             && pseudo_intersects(
                 &ll.nodes[a],
                 &ll.nodes[p],
@@ -1036,7 +1036,7 @@ fn pseudo_intersects<T: Float + Display>(
     p2: &Node<T>,
     q2: &Node<T>,
 ) -> bool {
-    if (equals(p1, p2) && equals(q1, q2)) || (equals(p1, q2) && equals(q1, p2)) {
+    if (p1.xy_eq(p2) && q1.xy_eq(q2)) || (p1.xy_eq(q2) && q1.xy_eq(p2)) {
         return true;
     }
     let zero = T::zero();
@@ -1538,11 +1538,11 @@ mod tests {
     fn test_equals() {
         let body = vec![0.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&body, 0, body.len(), true);
-        assert!(equals(&ll.nodes[1], &ll.nodes[2]));
+        assert!(ll.nodes[1].xy_eq(&ll.nodes[2]));
 
         let body = vec![2.0, 1.0, 0.0, 1.0];
         let (ll, _) = linked_list(&body, 0, body.len(), true);
-        assert!(!equals(&ll.nodes[1], &ll.nodes[2]));
+        assert!(!ll.nodes[1].xy_eq(&ll.nodes[2]));
     }
 
     #[test]
