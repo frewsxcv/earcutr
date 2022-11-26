@@ -76,24 +76,18 @@ macro_rules! dlog {
 // than bracket operator (indexing operator) nodes[index]
 macro_rules! node {
     ($ll:expr,$idx:expr) => {
-        unsafe { $ll.nodes.get_unchecked($idx) }
-        //$ll.nodes[$idx]
+        $ll.nodes[$idx]
     };
 }
 macro_rules! nodemut {
     ($ll:expr,$idx:expr) => {
-        unsafe { $ll.nodes.get_unchecked_mut($idx) }
-        //$ll.nodes.get_mut($idx).unwrap()
+        $ll.nodes.get_mut($idx).unwrap()
     };
 }
 // Note: none of the following macros work for Left-Hand-Side of assignment.
 macro_rules! next {
     ($ll:expr,$idx:expr) => {
-        unsafe {
-            $ll.nodes
-                .get_unchecked($ll.nodes.get_unchecked($idx).next_idx)
-        }
-        //$ll.nodes[$ll.nodes[$idx].next_idx]
+        $ll.nodes[$ll.nodes[$idx].next_idx]
     };
 }
 macro_rules! nextref {
@@ -288,7 +282,7 @@ fn eliminate_holes<T: Float + Display>(
         if list == Some(ll.nodes[list.unwrap()].next_idx) {
             nodemut!(ll, list.unwrap()).is_steiner_point = true;
         }
-        queue.push(*node!(ll, leftmost_idx.unwrap()));
+        queue.push(node!(ll, leftmost_idx.unwrap()));
     }
 
     queue.sort_by(compare_x);
