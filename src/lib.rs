@@ -277,8 +277,13 @@ fn eliminate_holes<T: Float + Display>(
         } else {
             vertices.len()
         };
-        let (list, leftmost_idx) =
-            linked_list_add_contour(ll, vertices, vertices_hole_start_index, vertices_hole_end_index, false);
+        let (list, leftmost_idx) = linked_list_add_contour(
+            ll,
+            vertices,
+            vertices_hole_start_index,
+            vertices_hole_end_index,
+            false,
+        );
         if list == ll.nodes[list].next_idx {
             nodemut!(ll, list).is_steiner_point = true;
         }
@@ -326,14 +331,12 @@ fn earcut_linked_hashed<T: Float + Display>(
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
         let node_index_triangle = NodeIndexTriangle(prev_idx, ear_idx, next_idx);
-        if is_ear_hashed(ll, node_index_triangle.node_triangle(ll)) {
-            triangle_indices.push(
-                VerticesIndexTriangle(
-                    node!(ll, prev_idx).vertices_index,
-                    node!(ll, ear_idx).vertices_index,
-                    node!(ll, next_idx).vertices_index,
-                )
-            );
+        if node_index_triangle.node_triangle(ll).is_ear_hashed(ll) {
+            triangle_indices.push(VerticesIndexTriangle(
+                node!(ll, prev_idx).vertices_index,
+                node!(ll, ear_idx).vertices_index,
+                node!(ll, next_idx).vertices_index,
+            ));
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
             ear_idx = node!(ll, next_idx).next_idx;
@@ -375,13 +378,11 @@ fn earcut_linked_unhashed<T: Float + Display>(
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
         if NodeIndexTriangle(prev_idx, ear_idx, next_idx).is_ear(ll) {
-            triangles.push(
-                VerticesIndexTriangle(
-                    node!(ll, prev_idx).vertices_index,
-                    node!(ll, ear_idx).vertices_index,
-                    node!(ll, next_idx).vertices_index,
-                )
-            );
+            triangles.push(VerticesIndexTriangle(
+                node!(ll, prev_idx).vertices_index,
+                node!(ll, ear_idx).vertices_index,
+                node!(ll, next_idx).vertices_index,
+            ));
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
             ear_idx = node!(ll, next_idx).next_idx;
@@ -526,7 +527,8 @@ impl NodeIndexTriangle {
                         self.ear_node(ll),
                         self.next_node(ll),
                         *p,
-                    ) && (NodeTriangle(*prevref!(ll, p.idx), *p, *nextref!(ll, p.idx)).area() >= zero)
+                    ) && (NodeTriangle(*prevref!(ll, p.idx), *p, *nextref!(ll, p.idx)).area()
+                        >= zero)
                 }),
         }
     }
@@ -542,6 +544,84 @@ impl<T: Float + Display> NodeTriangle<T> {
         let r = self.2;
         // signed area of a parallelogram
         (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
+    }
+
+    #[inline(always)]
+    fn is_ear_hashed(&self, ll: &mut LinkedLists<T>) -> bool {
+        let zero = T::zero();
+
+        if self.area() >= zero {
+            return false;
+        };
+        let NodeTriangle(prev, ear, next) = self;
+
+        let bbox_maxx = T::max(prev.x, T::max(ear.x, next.x));
+        let bbox_maxy = T::max(prev.y, T::max(ear.y, next.y));
+        let bbox_minx = T::min(prev.x, T::min(ear.x, next.x));
+        let bbox_miny = T::min(prev.y, T::min(ear.y, next.y));
+        // z-order range for the current triangle bbox;
+        let min_z = zorder(bbox_minx, bbox_miny, ll.invsize);
+        let max_z = zorder(bbox_maxx, bbox_maxy, ll.invsize);
+
+        let mut p = ear.prevz_idx;
+        let mut n = ear.nextz_idx;
+        while (p != NULL) && (node!(ll, p).z >= min_z) && (n != NULL) && (node!(ll, n).z <= max_z) {
+            if earcheck(
+                prev,
+                ear,
+                next,
+                prevref!(ll, p),
+                &ll.nodes[p],
+                nextref!(ll, p),
+            ) {
+                return false;
+            }
+            p = node!(ll, p).prevz_idx;
+
+            if earcheck(
+                prev,
+                ear,
+                next,
+                prevref!(ll, n),
+                &ll.nodes[n],
+                nextref!(ll, n),
+            ) {
+                return false;
+            }
+            n = node!(ll, n).nextz_idx;
+        }
+
+        nodemut!(ll, NULL).z = min_z - 1;
+        while node!(ll, p).z >= min_z {
+            if earcheck(
+                prev,
+                ear,
+                next,
+                prevref!(ll, p),
+                &ll.nodes[p],
+                nextref!(ll, p),
+            ) {
+                return false;
+            }
+            p = node!(ll, p).prevz_idx;
+        }
+
+        nodemut!(ll, NULL).z = max_z + 1;
+        while node!(ll, n).z <= max_z {
+            if earcheck(
+                prev,
+                ear,
+                next,
+                prevref!(ll, n),
+                &ll.nodes[n],
+                nextref!(ll, n),
+            ) {
+                return false;
+            }
+            n = node!(ll, n).nextz_idx;
+        }
+
+        true
     }
 }
 
@@ -561,87 +641,6 @@ fn earcheck<T: Float + Display>(
         && (p.idx != c.idx)
         && point_in_triangle(*a, *b, *c, *p)
         && NodeTriangle(*prev, *p, *next).area() >= zero
-}
-
-#[inline(always)]
-fn is_ear_hashed<T: Float + Display>(
-    ll: &mut LinkedLists<T>,
-    node_triangle: NodeTriangle<T>,
-) -> bool {
-    let zero = T::zero();
-
-    if node_triangle.area() >= zero {
-        return false;
-    };
-    let NodeTriangle(prev, ear, next) = node_triangle;
-
-    let bbox_maxx = T::max(prev.x, T::max(ear.x, next.x));
-    let bbox_maxy = T::max(prev.y, T::max(ear.y, next.y));
-    let bbox_minx = T::min(prev.x, T::min(ear.x, next.x));
-    let bbox_miny = T::min(prev.y, T::min(ear.y, next.y));
-    // z-order range for the current triangle bbox;
-    let min_z = zorder(bbox_minx, bbox_miny, ll.invsize);
-    let max_z = zorder(bbox_maxx, bbox_maxy, ll.invsize);
-
-    let mut p = ear.prevz_idx;
-    let mut n = ear.nextz_idx;
-    while (p != NULL) && (node!(ll, p).z >= min_z) && (n != NULL) && (node!(ll, n).z <= max_z) {
-        if earcheck(
-            &prev,
-            &ear,
-            &next,
-            prevref!(ll, p),
-            &ll.nodes[p],
-            nextref!(ll, p),
-        ) {
-            return false;
-        }
-        p = node!(ll, p).prevz_idx;
-
-        if earcheck(
-            &prev,
-            &ear,
-            &next,
-            prevref!(ll, n),
-            &ll.nodes[n],
-            nextref!(ll, n),
-        ) {
-            return false;
-        }
-        n = node!(ll, n).nextz_idx;
-    }
-
-    nodemut!(ll, NULL).z = min_z - 1;
-    while node!(ll, p).z >= min_z {
-        if earcheck(
-            &prev,
-            &ear,
-            &next,
-            prevref!(ll, p),
-            &ll.nodes[p],
-            nextref!(ll, p),
-        ) {
-            return false;
-        }
-        p = node!(ll, p).prevz_idx;
-    }
-
-    nodemut!(ll, NULL).z = max_z + 1;
-    while node!(ll, n).z <= max_z {
-        if earcheck(
-            &prev,
-            &ear,
-            &next,
-            prevref!(ll, n),
-            &ll.nodes[n],
-            nextref!(ll, n),
-        ) {
-            return false;
-        }
-        n = node!(ll, n).nextz_idx;
-    }
-
-    true
 }
 
 fn filter_points<T: Float + Display>(
@@ -808,7 +807,11 @@ impl FinalTriangleIndices {
     }
 }
 
-pub fn earcut<T: Float + Display>(vertices: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
+pub fn earcut<T: Float + Display>(
+    vertices: &[T],
+    hole_indices: &[usize],
+    dims: usize,
+) -> Vec<usize> {
     if vertices.is_empty() {
         return vec![];
     }
@@ -892,13 +895,11 @@ fn cure_local_intersections<T: Float + Display>(
             && locally_inside(ll, &ll.nodes[a], &ll.nodes[b])
             && locally_inside(ll, &ll.nodes[b], &ll.nodes[a])
         {
-            triangles.push(
-                VerticesIndexTriangle(
-                    ll.nodes[a].vertices_index,
-                    ll.nodes[p].vertices_index,
-                    ll.nodes[b].vertices_index,
-                )
-            );
+            triangles.push(VerticesIndexTriangle(
+                ll.nodes[a].vertices_index,
+                ll.nodes[p].vertices_index,
+                ll.nodes[b].vertices_index,
+            ));
 
             // remove two nodes involved
             ll.remove_node(p);
@@ -1211,8 +1212,18 @@ fn split_bridge_polygon<T: Float + Display>(
 ) -> NodeIdx {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = Node::new(ll.nodes[a].vertices_index, ll.nodes[a].x, ll.nodes[a].y, cidx);
-    let mut d = Node::new(ll.nodes[b].vertices_index, ll.nodes[b].x, ll.nodes[b].y, didx);
+    let mut c = Node::new(
+        ll.nodes[a].vertices_index,
+        ll.nodes[a].x,
+        ll.nodes[a].y,
+        cidx,
+    );
+    let mut d = Node::new(
+        ll.nodes[b].vertices_index,
+        ll.nodes[b].x,
+        ll.nodes[b].y,
+        didx,
+    );
 
     let an = ll.nodes[a].next_idx;
     let bp = ll.nodes[b].prev_idx;
