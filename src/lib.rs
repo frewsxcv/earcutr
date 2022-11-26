@@ -307,7 +307,7 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
 fn earcut_linked_hashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: NodeIdx,
-    triangle_indices: &mut TriangleIndices,
+    triangle_indices: &mut FinalTriangleIndices,
     pass: usize,
 ) {
     // interlink polygon nodes in z-order
@@ -357,7 +357,7 @@ fn earcut_linked_hashed<T: Float + Display>(
 fn earcut_linked_unhashed<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: NodeIdx,
-    triangles: &mut TriangleIndices,
+    triangles: &mut FinalTriangleIndices,
     pass: usize,
 ) {
     // iterate through ears, slicing them one by one
@@ -755,9 +755,9 @@ fn point_in_triangle<T: Float + Display>(
 }
 
 #[derive(Default, Debug)]
-struct TriangleIndices(Vec<usize>);
+struct FinalTriangleIndices(Vec<usize>);
 
-impl TriangleIndices {
+impl FinalTriangleIndices {
     fn push(&mut self, a: usize, b: usize, c: usize) {
         self.0.push(a);
         self.0.push(b);
@@ -772,7 +772,7 @@ pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usiz
     };
 
     let (mut ll, outer_node) = linked_list(data, 0, outer_len, true);
-    let mut triangles = TriangleIndices(Vec::with_capacity(data.len() / DIM));
+    let mut triangles = FinalTriangleIndices(Vec::with_capacity(data.len() / DIM));
     if ll.nodes.len() == 1 || DIM != dims {
         return triangles.0;
     }
@@ -815,7 +815,7 @@ algorithm itself.*/
 fn cure_local_intersections<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     instart: NodeIdx,
-    triangles: &mut TriangleIndices,
+    triangles: &mut FinalTriangleIndices,
 ) -> NodeIdx {
     let mut p = instart;
     let mut start = instart;
@@ -873,7 +873,7 @@ fn cure_local_intersections<T: Float + Display>(
 fn split_earcut<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     start_idx: NodeIdx,
-    triangles: &mut TriangleIndices,
+    triangles: &mut FinalTriangleIndices,
 ) {
     // look for a valid diagonal that divides the polygon into two
     let mut a = start_idx;
@@ -1617,19 +1617,19 @@ mod tests {
     fn test_earcut_linked() {
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (TriangleIndices::default(), 0);
+        let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
         earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
         assert!(tris.0.len() == 6);
 
         let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (TriangleIndices::default(), 0);
+        let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
         earcut_linked_unhashed(&mut ll, 1, &mut tris, pass);
         assert!(tris.0.len() == 9);
 
         let m = vec![0.0, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let (mut tris, pass) = (TriangleIndices::default(), 0);
+        let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
         earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
         assert!(tris.0.len() == 9);
     }
@@ -1902,7 +1902,7 @@ mod tests {
             0.0, 0.0, 1.0, 0.0, 1.1, 0.1, 0.9, 0.1, 1.0, 0.05, 1.0, 1.0, 0.0, 1.0,
         ];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let mut triangles = TriangleIndices::default();
+        let mut triangles = FinalTriangleIndices::default();
         cure_local_intersections(&mut ll, 0, &mut triangles);
         assert!(cycle_len(&ll, 1) == 7);
         assert!(triangles.0.is_empty());
@@ -1911,7 +1911,7 @@ mod tests {
         // self intersection. so it should, in theory, detect and clean
         let m = vec![0.0, 0.0, 1.0, 0.0, 1.1, 0.1, 1.1, 0.0, 1.0, 1.0, 0.0, 1.0];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-        let mut triangles = TriangleIndices::default();
+        let mut triangles = FinalTriangleIndices::default();
         cure_local_intersections(&mut ll, 1, &mut triangles);
         assert!(cycle_len(&ll, 1) == 4);
         assert!(triangles.0.len() == 3);
@@ -1923,7 +1923,7 @@ mod tests {
 
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
         let start = 1;
-        let mut triangles = TriangleIndices::default();
+        let mut triangles = FinalTriangleIndices::default();
         split_earcut(&mut ll, start, &mut triangles);
         assert!(triangles.0.len() == 6);
         assert!(ll.nodes.len() == 7);
@@ -1934,7 +1934,7 @@ mod tests {
         ];
         let (mut ll, _) = linked_list(&m, 0, m.len(), true);
         let start = 1;
-        let mut triangles = TriangleIndices::default();
+        let mut triangles = FinalTriangleIndices::default();
         split_earcut(&mut ll, start, &mut triangles);
         assert!(ll.nodes.len() == 13);
     }
