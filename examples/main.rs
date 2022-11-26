@@ -36,16 +36,15 @@ fn parse_json(rawdata: &str) -> Option<Vec<Vec<Vec<f64>>>> {
         Ok(jsondata) => {
             if jsondata.is_array() {
                 let contours = jsondata.as_array().unwrap();
-                for i in 0..contours.len() {
-                    let contourval = &contours[i];
+                for contourval in contours {
                     if contourval.is_array() {
                         let contour = contourval.as_array().unwrap();
                         let mut vc: Vec<Vec<f64>> = Vec::new();
-                        for j in 0..contour.len() {
-                            let points = contour[j].as_array().unwrap();
+                        for points in contour {
+                            let points = points.as_array().unwrap();
                             let mut vp: Vec<f64> = Vec::new();
-                            for k in 0..points.len() {
-                                let val = points[k].to_string();
+                            for val in points {
+                                let val = val.to_string();
                                 let pval = val.parse::<f64>().unwrap();
                                 vp.push(pval);
                             }
