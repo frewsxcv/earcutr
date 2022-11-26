@@ -265,7 +265,7 @@ fn compare_x<T: Float + Display>(a: &Node<T>, b: &Node<T>) -> std::cmp::Ordering
 fn eliminate_holes<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     vertices: &[T],
-    hole_indices: &[usize],
+    hole_indices: &[VerticesIndex],
     inouter_node: NodeIdx,
 ) -> NodeIdx {
     let mut outer_node = inouter_node;
@@ -717,8 +717,8 @@ fn linked_list<T: Float + Display>(
 fn linked_list_add_contour<T: Float + Display>(
     ll: &mut LinkedLists<T>,
     vertices: &[T],
-    start: usize,
-    end: usize,
+    start: VerticesIndex,
+    end: VerticesIndex,
     clockwise: bool,
 ) -> (Option<NodeIdx>, Option<NodeIdx>) {
     if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
@@ -1258,7 +1258,7 @@ pub fn deviation<T: Float + Display>(
     }
 }
 
-fn signed_area<T: Float + Display>(vertices: &[T], start: usize, end: usize) -> T {
+fn signed_area<T: Float + Display>(vertices: &[T], start: VerticesIndex, end: VerticesIndex) -> T {
     let i = (start..end).step_by(DIM);
     let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
     let zero = T::zero();
