@@ -928,7 +928,7 @@ fn find_hole_bridge<T: Float + Display>(
     let hx = node!(ll, hole).x;
     let hy = node!(ll, hole).y;
     let mut qx = T::neg_infinity();
-    let mut m: NodeIdx = NULL;
+    let mut m: Option<NodeIdx> = None;
 
     // find a segment intersected by a ray from the hole's leftmost
     // point to the left; segment's endpoint with lesser x will be
@@ -948,13 +948,11 @@ fn find_hole_bridge<T: Float + Display>(
             } else if qx == hx && hy == n.y {
                 return p.next_idx;
             }
-            m = if p.x < n.x { p.idx } else { n.idx };
+            m = if p.x < n.x { Some(p.idx) } else { Some(n.idx) };
         }
     }
 
-    if m == NULL {
-        return NULL;
-    }
+    let Some(m) = m else { return NULL };
 
     // hole touches outer segment; pick lower endpoint
     if hx == qx {
