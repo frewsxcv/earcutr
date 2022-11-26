@@ -536,6 +536,14 @@ impl NodeIndexTriangle {
 struct NodeTriangle<T: Float + Display>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>);
 
 impl<T: Float + Display> NodeTriangle<T> {
+    fn from_ear_node(ear_node: LinkedListNode<T>, ll: &mut LinkedLists<T>) -> Self {
+        NodeTriangle(
+            ll.nodes[ear_node.prev_linked_list_node_index],
+            ear_node,
+            ll.nodes[ear_node.next_linked_list_node_index],
+        )
+    }
+
     fn area(&self) -> T {
         let p = self.0;
         let q = self.1;
@@ -665,11 +673,7 @@ fn filter_points<T: Float + Display>(
         again = false;
         if !node!(ll, p).is_steiner_point
             && (ll.nodes[p].xy_eq(ll.nodes[ll.nodes[p].next_linked_list_node_index])
-                || NodeTriangle(
-                    ll.nodes[ll.nodes[p].prev_linked_list_node_index],
-                    ll.nodes[p],
-                    ll.nodes[ll.nodes[p].next_linked_list_node_index],
-                )
+                || NodeTriangle::from_ear_node(ll.nodes[p], ll)
                 .area()
                 .is_zero())
         {
