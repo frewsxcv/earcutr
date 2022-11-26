@@ -312,8 +312,6 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
     }
 }
 
-struct Triangle(NodeIdx, NodeIdx, NodeIdx);
-
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
 fn earcut_linked_hashed<T: Float + Display>(
@@ -508,10 +506,12 @@ impl NodeIndexTriangle {
         ll.nodes[self.2]
     }
 
+    fn node_triangle<T: Float + Display>(self, ll: &LinkedLists<T>) -> NodeTriangle<T> {
+        NodeTriangle(self.prev_node(ll), self.ear_node(ll), self.next_node(ll))
+    }
+
     fn area<T: Float + Display>(self, ll: &LinkedLists<T>) -> T {
-        let (p, q, r) = (self.prev_node(ll), self.ear_node(ll), self.next_node(ll));
-        // signed area of a parallelogram
-        (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
+        self.node_triangle(ll).area()
     }
 
     // check whether a polygon node forms a valid ear with adjacent nodes
@@ -524,6 +524,19 @@ impl NodeIndexTriangle {
                     && (area(prevref!(ll, p.idx), p, nextref!(ll, p.idx)) >= zero)
             }),
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct NodeTriangle<T: Float + Display>(Node<T>, Node<T>, Node<T>);
+
+impl<T: Float + Display> NodeTriangle<T> {
+    fn area(&self) -> T {
+        let p = self.0;
+        let q = self.1;
+        let r = self.2;
+        // signed area of a parallelogram
+        (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
     }
 }
 
