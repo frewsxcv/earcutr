@@ -817,7 +817,7 @@ impl FinalTriangleIndices {
 
 pub fn earcut<T: Float + Display>(
     vertices: &[T],
-    hole_indices: &[usize],
+    hole_indices: &[VerticesIndex],
     dims: usize,
 ) -> Vec<usize> {
     if vertices.is_empty() {
