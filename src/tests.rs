@@ -84,9 +84,9 @@ fn dump_cycle<T: num_traits::float::Float + std::fmt::Display>(
             next!(ll, n.idx).vertices_index,
             n.x,
             n.y,
-            pn(n.prevz_idx),
-            pn(n.nextz_idx),
-            pb(n.is_steiner_point),
+            crate::legacy::pn(n.prevz_idx),
+            crate::legacy::pn(n.nextz_idx),
+            crate::legacy::pb(n.is_steiner_point),
             //                pb(ll.freelist.contains(&n.idx)),
             false,
             cycle_len(ll, n.idx),
@@ -308,9 +308,9 @@ fn test_filter_points() {
     let (mut ll, _) = linked_list(&m, 0, m.len(), true);
     let lllen = ll.nodes.len();
     println!("len {}", ll.nodes.len());
-    println!("{}", dump(&ll));
+    println!("{}", crate::legacy::dump(&ll));
     let r1 = filter_points(&mut ll, 1, Some(lllen - 1));
-    println!("{}", dump(&ll));
+    println!("{}", crate::legacy::dump(&ll));
     println!("r1 {} cyclen {}", r1, cycle_len(&ll, r1));
     assert!(cycle_len(&ll, r1) == 4);
 
@@ -401,7 +401,7 @@ fn test_intersects_polygon() {
 
     let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.9, 1.0, 0.0, 1.0];
     let (ll, _) = linked_list(&m, 0, m.len(), true);
-    dlog!(9, "{}", dump(&ll));
+    dlog!(9, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", intersects_polygon(&ll, ll.nodes[0], ll.nodes[2]));
     dlog!(5, "{}", intersects_polygon(&ll, ll.nodes[2], ll.nodes[0]));
 }
@@ -527,7 +527,7 @@ fn test_eliminate_hole() {
     assert!(cycle_len(&ll, 1) == 4);
     assert!(cycle_len(&ll, 5) == 4);
     eliminate_hole(&mut ll, holestart / DIM + 1, 1);
-    println!("{}", dump(&ll));
+    println!("{}", crate::legacy::dump(&ll));
     println!("{}", cycle_len(&ll, 1));
     println!("{}", cycle_len(&ll, 7));
     assert!(cycle_len(&ll, 1) == 10);
@@ -571,7 +571,7 @@ fn test_cycle_len() {
     let holeend = body.len();
     linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
 
-    dlog!(5, "{}", dump(&ll));
+    dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
 }
 
@@ -594,7 +594,7 @@ fn test_cycles_report() {
     let holeend = body.len();
     linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
 
-    dlog!(5, "{}", dump(&ll));
+    dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
 }
 
@@ -680,7 +680,7 @@ fn test_flatten() {
             vec![0.2, 0.8],
         ],
     ];
-    let (coords, hole_indices, dims) = flatten(&data);
+    let (coords, hole_indices, dims) = crate::legacy::flatten(&data);
     assert!(DIM == dims);
     println!("{:?} {:?}", coords, hole_indices);
     assert!(coords.len() == 24);
@@ -701,7 +701,7 @@ fn test_iss45() {
         vec![vec![15.0, 30.0], vec![20.0, 35.0], vec![10.0, 40.0]],
         vec![vec![15.0, 15.0], vec![15.0, 20.0], vec![20.0, 15.0]],
     ];
-    let (coords, hole_indices, dims) = flatten(&data);
+    let (coords, hole_indices, dims) = crate::legacy::flatten(&data);
     assert!(DIM == dims);
     let triangles = earcut(&coords, &hole_indices, DIM);
     assert!(triangles.len() > 4);

@@ -82,7 +82,7 @@ fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
             };
         }
     };
-    earcutr::flatten(&xdata)
+    earcutr::legacy::flatten(&xdata)
 }
 
 fn benchy(nm: &str) {

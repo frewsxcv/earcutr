@@ -92,7 +92,7 @@ fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
             };
         }
     };
-    earcutr::flatten(&xdata)
+    earcutr::legacy::flatten(&xdata)
 }
 
 fn bench_quadrilateral(bench: &mut Bencher) {
@@ -116,7 +116,7 @@ fn bench_flatten(bench: &mut Bencher) {
         vec![vec![1., 1.], vec![3., 1.], vec![3., 3.]],               // hole ring
     ];
     bench.iter(|| {
-        let (_vertices, _holes, _dimensions) = earcutr::flatten(&v);
+        let (_vertices, _holes, _dimensions) = earcutr::legacy::flatten(&v);
     })
 }
 

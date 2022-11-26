@@ -116,7 +116,7 @@ fn area_test(filename: &str, expected_num_tris: usize, expected_deviation: f64) 
                         None => dlog!(4, "failed to parse {}", fullname),
                         Some(parsed_data) => {
                             xdata = parsed_data;
-                            let (data, holeidxs, dimensions) = earcutr::flatten(&xdata);
+                            let (data, holeidxs, dimensions) = earcutr::legacy::flatten(&xdata);
                             triangles = earcutr::earcut(&data, &holeidxs, dimensions);
                             actual_num_tris = triangles.len() / 3;
                             actual_deviation =
