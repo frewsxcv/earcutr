@@ -7,12 +7,12 @@ static NULL: usize = 0;
 static DEBUG: usize = 0; // dlogs get optimized away at 0
 
 type NodeIdx = usize;
-type VertIdx = usize;
+type VerticesIndex = usize;
 
 #[derive(Clone, Copy, Debug)]
 struct Node<T: Float + Display> {
     /// vertex index in flat one-d array of 64bit float coords
-    data_index: VertIdx,
+    vertices_index: VerticesIndex,
     /// vertex x coordinate
     x: T,
     /// vertex y coordinate
@@ -34,9 +34,9 @@ struct Node<T: Float + Display> {
 }
 
 impl<T: Float + Display> Node<T> {
-    fn new(i: VertIdx, x: T, y: T, idx: NodeIdx) -> Node<T> {
+    fn new(i: VerticesIndex, x: T, y: T, idx: NodeIdx) -> Node<T> {
         Node {
-            data_index: i,
+            vertices_index: i,
             x,
             y,
             prev_idx: NULL,
@@ -134,7 +134,7 @@ impl<T: Float + Display> LinkedLists<T> {
     fn iter_pairs(&self, r: std::ops::Range<NodeIdx>) -> NodePairIterator<T> {
         return NodePairIterator::new(self, r.start, r.end);
     }
-    fn insert_node(&mut self, i: VertIdx, x: T, y: T, last: Option<NodeIdx>) -> NodeIdx {
+    fn insert_node(&mut self, i: VerticesIndex, x: T, y: T, last: Option<NodeIdx>) -> NodeIdx {
         let mut p = Node::new(i, x, y, self.nodes.len());
         match last {
             None => {
@@ -175,7 +175,7 @@ impl<T: Float + Display> LinkedLists<T> {
         };
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
         ll.nodes.push(Node {
-            data_index: 0,
+            vertices_index: 0,
             x: T::zero(),
             y: T::zero(),
             prev_idx: 0,
@@ -264,21 +264,21 @@ fn compare_x<T: Float + Display>(a: &Node<T>, b: &Node<T>) -> std::cmp::Ordering
 // without holes
 fn eliminate_holes<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    data: &[T],
+    vertices: &[T],
     hole_indices: &[usize],
     inouter_node: NodeIdx,
 ) -> NodeIdx {
     let mut outer_node = inouter_node;
     let mut queue: Vec<Node<T>> = Vec::new();
     for i in 0..hole_indices.len() {
-        let data_hole_start_index = hole_indices[i] * DIM;
-        let data_hole_end_index = if i < (hole_indices.len() - 1) {
+        let vertices_hole_start_index = hole_indices[i] * DIM;
+        let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
             hole_indices[i + 1] * DIM
         } else {
-            data.len()
+            vertices.len()
         };
         let (list, leftmost_idx) =
-            linked_list_add_contour(ll, data, data_hole_start_index, data_hole_end_index, false);
+            linked_list_add_contour(ll, vertices, vertices_hole_start_index, vertices_hole_end_index, false);
         if list == Some(ll.nodes[list.unwrap()].next_idx) {
             nodemut!(ll, list.unwrap()).is_steiner_point = true;
         }
@@ -327,9 +327,9 @@ fn earcut_linked_hashed<T: Float + Display>(
         next_idx = node!(ll, ear_idx).next_idx;
         if is_ear_hashed(ll, prev_idx, ear_idx, next_idx) {
             triangle_indices.push(
-                node!(ll, prev_idx).data_index,
-                node!(ll, ear_idx).data_index,
-                node!(ll, next_idx).data_index,
+                node!(ll, prev_idx).vertices_index,
+                node!(ll, ear_idx).vertices_index,
+                node!(ll, next_idx).vertices_index,
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -373,9 +373,9 @@ fn earcut_linked_unhashed<T: Float + Display>(
         next_idx = node!(ll, ear_idx).next_idx;
         if NodeIndexTriangle(prev_idx, ear_idx, next_idx).is_ear(ll) {
             triangles.push(
-                node!(ll, prev_idx).data_index,
-                node!(ll, ear_idx).data_index,
-                node!(ll, next_idx).data_index,
+                node!(ll, prev_idx).vertices_index,
+                node!(ll, ear_idx).vertices_index,
+                node!(ll, next_idx).vertices_index,
             );
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
@@ -700,58 +700,58 @@ fn filter_points<T: Float + Display>(
 // create a circular doubly linked list from polygon points in the
 // specified winding order
 fn linked_list<T: Float + Display>(
-    data: &[T],
+    vertices: &[T],
     start: usize,
     end: usize,
     clockwise: bool,
 ) -> (LinkedLists<T>, Option<NodeIdx>) {
-    let mut ll: LinkedLists<T> = LinkedLists::new(data.len() / DIM);
-    if data.len() < 80 {
+    let mut ll: LinkedLists<T> = LinkedLists::new(vertices.len() / DIM);
+    if vertices.len() < 80 {
         ll.usehash = false
     };
-    let (last_idx, _) = linked_list_add_contour(&mut ll, data, start, end, clockwise);
+    let (last_idx, _) = linked_list_add_contour(&mut ll, vertices, start, end, clockwise);
     (ll, last_idx)
 }
 
 // add new nodes to an existing linked list.
 fn linked_list_add_contour<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    data: &[T],
+    vertices: &[T],
     start: usize,
     end: usize,
     clockwise: bool,
 ) -> (Option<NodeIdx>, Option<NodeIdx>) {
-    if start > data.len() || end > data.len() || data.is_empty() {
+    if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
         return (None, None);
     }
     let mut lastidx = None;
     let mut leftmost_idx = None;
     let mut contour_minx = T::max_value();
 
-    if clockwise == (signed_area(data, start, end) > T::zero()) {
+    if clockwise == (signed_area(vertices, start, end) > T::zero()) {
         for i in (start..end).step_by(DIM) {
-            lastidx = Some(ll.insert_node(i / DIM, data[i], data[i + 1], lastidx));
-            if contour_minx > data[i] {
-                contour_minx = data[i];
+            lastidx = Some(ll.insert_node(i / DIM, vertices[i], vertices[i + 1], lastidx));
+            if contour_minx > vertices[i] {
+                contour_minx = vertices[i];
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(data[i + 1], ll.miny);
-                ll.maxx = T::max(data[i], ll.maxx);
-                ll.maxy = T::max(data[i + 1], ll.maxy);
+                ll.miny = T::min(vertices[i + 1], ll.miny);
+                ll.maxx = T::max(vertices[i], ll.maxx);
+                ll.maxy = T::max(vertices[i + 1], ll.maxy);
             }
         }
     } else {
         for i in (start..=(end - DIM)).rev().step_by(DIM) {
-            lastidx = Some(ll.insert_node(i / DIM, data[i], data[i + 1], lastidx));
-            if contour_minx > data[i] {
-                contour_minx = data[i];
+            lastidx = Some(ll.insert_node(i / DIM, vertices[i], vertices[i + 1], lastidx));
+            if contour_minx > vertices[i] {
+                contour_minx = vertices[i];
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(data[i + 1], ll.miny);
-                ll.maxx = T::max(data[i], ll.maxx);
-                ll.maxy = T::max(data[i + 1], ll.maxy);
+                ll.miny = T::min(vertices[i + 1], ll.miny);
+                ll.maxx = T::max(vertices[i], ll.maxx);
+                ll.maxy = T::max(vertices[i + 1], ll.maxy);
             }
         }
     }
@@ -804,19 +804,19 @@ impl FinalTriangleIndices {
     }
 }
 
-pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
+pub fn earcut<T: Float + Display>(vertices: &[T], hole_indices: &[usize], dims: usize) -> Vec<usize> {
     let outer_len = match hole_indices.len() {
-        0 => data.len(),
+        0 => vertices.len(),
         _ => hole_indices[0] * DIM,
     };
 
-    let (mut ll, outer_node) = linked_list(data, 0, outer_len, true);
-    let mut triangles = FinalTriangleIndices(Vec::with_capacity(data.len() / DIM));
+    let (mut ll, outer_node) = linked_list(vertices, 0, outer_len, true);
+    let mut triangles = FinalTriangleIndices(Vec::with_capacity(vertices.len() / DIM));
     if ll.nodes.len() == 1 || DIM != dims {
         return triangles.0;
     }
 
-    let outer_node = eliminate_holes(&mut ll, data, hole_indices, outer_node.unwrap());
+    let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node.unwrap());
 
     if ll.usehash {
         ll.invsize = calc_invsize(ll.minx, ll.miny, ll.maxx, ll.maxy);
@@ -885,9 +885,9 @@ fn cure_local_intersections<T: Float + Display>(
             && locally_inside(ll, &ll.nodes[b], &ll.nodes[a])
         {
             triangles.push(
-                ll.nodes[a].data_index,
-                ll.nodes[p].data_index,
-                ll.nodes[b].data_index,
+                ll.nodes[a].vertices_index,
+                ll.nodes[p].vertices_index,
+                ll.nodes[b].vertices_index,
             );
 
             // remove two nodes involved
@@ -918,7 +918,7 @@ fn split_earcut<T: Float + Display>(
     loop {
         let mut b = next!(ll, a).next_idx;
         while b != ll.nodes[a].prev_idx {
-            if ll.nodes[a].data_index != ll.nodes[b].data_index
+            if ll.nodes[a].vertices_index != ll.nodes[b].vertices_index
                 && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b])
             {
                 // split the polygon in two by the diagonal
@@ -1030,8 +1030,8 @@ fn find_hole_bridge<T: Float + Display>(
 // check if a diagonal between two polygon nodes is valid (lies in
 // polygon interior)
 fn is_valid_diagonal<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &Node<T>) -> bool {
-    return next!(ll, a.idx).data_index != b.data_index
-        && prev!(ll, a.idx).data_index != b.data_index
+    return next!(ll, a.idx).vertices_index != b.vertices_index
+        && prev!(ll, a.idx).vertices_index != b.vertices_index
         && !intersects_polygon(ll, *a, *b)
         && locally_inside(ll, a, b)
         && locally_inside(ll, b, a)
@@ -1086,10 +1086,10 @@ fn pseudo_intersects<T: Float + Display>(
 // check if a polygon diagonal intersects any polygon segments
 fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: Node<T>, b: Node<T>) -> bool {
     ll.iter_pairs(a.idx..a.idx).any(|(p, n)| {
-        p.data_index != a.data_index
-            && n.data_index != a.data_index
-            && p.data_index != b.data_index
-            && n.data_index != b.data_index
+        p.vertices_index != a.vertices_index
+            && n.vertices_index != a.vertices_index
+            && p.vertices_index != b.vertices_index
+            && n.vertices_index != b.vertices_index
             && pseudo_intersects(*p, *n, a, b)
     })
 }
@@ -1201,8 +1201,8 @@ fn split_bridge_polygon<T: Float + Display>(
 ) -> NodeIdx {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = Node::new(ll.nodes[a].data_index, ll.nodes[a].x, ll.nodes[a].y, cidx);
-    let mut d = Node::new(ll.nodes[b].data_index, ll.nodes[b].x, ll.nodes[b].y, didx);
+    let mut c = Node::new(ll.nodes[a].vertices_index, ll.nodes[a].x, ll.nodes[a].y, cidx);
+    let mut d = Node::new(ll.nodes[b].vertices_index, ll.nodes[b].x, ll.nodes[b].y, didx);
 
     let an = ll.nodes[a].next_idx;
     let bp = ll.nodes[b].prev_idx;
@@ -1227,7 +1227,7 @@ fn split_bridge_polygon<T: Float + Display>(
 // return a percentage difference between the polygon area and its
 // triangulation area; used to verify correctness of triangulation
 pub fn deviation<T: Float + Display>(
-    data: &[T],
+    vertices: &[T],
     hole_indices: &[usize],
     dims: usize,
     triangles: &[usize],
@@ -1236,19 +1236,19 @@ pub fn deviation<T: Float + Display>(
         return T::nan();
     }
     let mut indices = hole_indices.to_vec();
-    indices.push(data.len() / DIM);
+    indices.push(vertices.len() / DIM);
     let (ix, iy) = (indices.iter(), indices.iter().skip(1));
-    let body_area = signed_area(data, 0, indices[0] * DIM).abs();
+    let body_area = signed_area(vertices, 0, indices[0] * DIM).abs();
     let polygon_area = ix.zip(iy).fold(body_area, |a, (ix, iy)| {
-        a - signed_area(data, ix * DIM, iy * DIM).abs()
+        a - signed_area(vertices, ix * DIM, iy * DIM).abs()
     });
 
     let i = triangles.iter().skip(0).step_by(3).map(|x| x * DIM);
     let j = triangles.iter().skip(1).step_by(3).map(|x| x * DIM);
     let k = triangles.iter().skip(2).step_by(3).map(|x| x * DIM);
     let triangles_area = i.zip(j).zip(k).fold(T::zero(), |ta, ((a, b), c)| {
-        ta + ((data[a] - data[c]) * (data[b + 1] - data[a + 1])
-            - (data[a] - data[b]) * (data[c + 1] - data[a + 1]))
+        ta + ((vertices[a] - vertices[c]) * (vertices[b + 1] - vertices[a + 1])
+            - (vertices[a] - vertices[b]) * (vertices[c + 1] - vertices[a + 1]))
             .abs()
     });
 
@@ -1258,12 +1258,12 @@ pub fn deviation<T: Float + Display>(
     }
 }
 
-fn signed_area<T: Float + Display>(data: &[T], start: usize, end: usize) -> T {
+fn signed_area<T: Float + Display>(vertices: &[T], start: usize, end: usize) -> T {
     let i = (start..end).step_by(DIM);
     let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
     let zero = T::zero();
     i.zip(j).fold(zero, |s, (i, j)| {
-        s + (data[j] - data[i]) * (data[i + 1] + data[j + 1])
+        s + (vertices[j] - vertices[i]) * (vertices[i + 1] + vertices[j + 1])
     })
 }
 
@@ -1312,7 +1312,7 @@ fn dump<T: Float + Display>(ll: &LinkedLists<T>) -> String {
         s.push_str(&format!(
             " {:>3} {:>3} {:>4} {:>4} {:>8.3} {:>8.3} {:>4} {:>4} {:>2} {:>2} {:>2} {:>4}\n",
             n.idx,
-            n.data_index,
+            n.vertices_index,
             pn(n.prev_idx),
             pn(n.next_idx),
             n.x,
@@ -1339,7 +1339,7 @@ fn cycle_dump<T: Float + Display>(ll: &LinkedLists<T>, p: NodeIdx) -> String {
     loop {
         count += 1;
         s.push_str(&format!("{} ", &ll.nodes[i].idx));
-        s.push_str(&format!("(i:{}), ", &ll.nodes[i].data_index));
+        s.push_str(&format!("(i:{}), ", &ll.nodes[i].vertices_index));
         i = ll.nodes[i].next_idx;
         if i == end {
             break s;
@@ -1401,7 +1401,7 @@ mod tests {
         ));
         let mut startidx: usize = 0;
         for n in &ll.nodes {
-            if n.data_index == start {
+            if n.vertices_index == start {
                 startidx = n.idx;
             };
         }
@@ -1416,9 +1416,9 @@ mod tests {
                 " {:>3} {:>3} {:>3} {:>4} {:>4} {:>8.3} {:>8.3} {:>4} {:>4} {:>2} {:>2} {:>2}\n",
                 count,
                 n.idx,
-                n.data_index,
-                prev!(ll, n.idx).data_index,
-                next!(ll, n.idx).data_index,
+                n.vertices_index,
+                prev!(ll, n.idx).vertices_index,
+                next!(ll, n.idx).vertices_index,
                 n.x,
                 n.y,
                 pn(n.prevz_idx),
@@ -1479,12 +1479,12 @@ mod tests {
     #[allow(dead_code)]
     fn horsh_ll<T: num_traits::float::Float + std::fmt::Display>(
         ll: &LinkedLists<T>,
-        starti: VertIdx,
+        starti: VerticesIndex,
     ) -> String {
         let mut s = "LL horsh: ".to_string();
         let mut startidx: usize = 0;
         for n in &ll.nodes {
-            if n.data_index == starti {
+            if n.vertices_index == starti {
                 startidx = n.idx;
             };
         }
@@ -1494,7 +1494,7 @@ mod tests {
         let mut state = 0u32;
         loop {
             let n = &ll.nodes[idx].clone();
-            state = horsh(state, n.data_index as u32);
+            state = horsh(state, n.vertices_index as u32);
             idx = next!(ll, idx).idx;
             count += 1;
             if idx == endidx || count > ll.nodes.len() {
@@ -1507,12 +1507,12 @@ mod tests {
 
     #[test]
     fn test_linked_list() {
-        let data = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
-        let (mut ll, _) = linked_list(&data, 0, data.len(), true);
+        let vertices = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
+        let (mut ll, _) = linked_list(&vertices, 0, vertices.len(), true);
         assert!(ll.nodes.len() == 5);
         assert!(ll.nodes[1].idx == 1);
-        assert!(ll.nodes[1].data_index == 6 / DIM);
-        assert!(ll.nodes[1].data_index == 3);
+        assert!(ll.nodes[1].vertices_index == 6 / DIM);
+        assert!(ll.nodes[1].vertices_index == 3);
         assert!(ll.nodes[1].x == 1.0);
         assert!(ll.nodes[1].y == 0.0);
         assert!(ll.nodes[1].next_idx == 2 && ll.nodes[1].prev_idx == 4);
@@ -1522,8 +1522,8 @@ mod tests {
 
     #[test]
     fn test_iter_pairs() {
-        let data = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
-        let (ll, _) = linked_list(&data, 0, data.len(), true);
+        let vertices = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+        let (ll, _) = linked_list(&vertices, 0, vertices.len(), true);
         let mut v: Vec<Node<f32>> = Vec::new();
         //        ll.iter(1..2)
         //.zip(ll.iter(2..3))
@@ -1537,8 +1537,8 @@ mod tests {
 
     #[test]
     fn test_point_in_triangle() {
-        let data = vec![0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 1.0, 0.1];
-        let (ll, _) = linked_list(&data, 0, data.len(), true);
+        let vertices = vec![0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 1.0, 0.1];
+        let (ll, _) = linked_list(&vertices, 0, vertices.len(), true);
         assert!(point_in_triangle(
             ll.nodes[1],
             ll.nodes[2],
@@ -1549,19 +1549,19 @@ mod tests {
 
     #[test]
     fn test_signed_area() {
-        let data1 = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
-        let data2 = vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0];
-        let a1 = signed_area(&data1, 0, 4);
-        let a2 = signed_area(&data2, 0, 4);
+        let vertices1 = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
+        let vertices2 = vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0];
+        let a1 = signed_area(&vertices1, 0, 4);
+        let a2 = signed_area(&vertices2, 0, 4);
         assert!(a1 == -a2);
     }
 
     #[test]
     fn test_deviation() {
-        let data1 = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
+        let vertices1 = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0];
         let tris = vec![0, 1, 2, 2, 3, 0];
         let hi: Vec<usize> = Vec::new();
-        assert!(deviation(&data1, &hi, DIM, &tris) == 0.0);
+        assert!(deviation(&vertices1, &hi, DIM, &tris) == 0.0);
     }
 
     #[test]
