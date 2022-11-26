@@ -12,6 +12,9 @@ mod tests;
 #[doc(hidden)]
 pub mod legacy;
 
+pub use legacy::flatten;
+pub use legacy::deviation;
+
 type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
 
@@ -1270,40 +1273,6 @@ fn split_bridge_polygon<T: Float + Display>(
     ll.nodes.push(c);
     ll.nodes.push(d);
     didx
-}
-
-// return a percentage difference between the polygon area and its
-// triangulation area; used to verify correctness of triangulation
-pub fn deviation<T: Float + Display>(
-    vertices: &[T],
-    hole_indices: &[usize],
-    dims: usize,
-    triangles: &[usize],
-) -> T {
-    if DIM != dims {
-        return T::nan();
-    }
-    let mut indices = hole_indices.to_vec();
-    indices.push(vertices.len() / DIM);
-    let (ix, iy) = (indices.iter(), indices.iter().skip(1));
-    let body_area = signed_area(vertices, 0, indices[0] * DIM).abs();
-    let polygon_area = ix.zip(iy).fold(body_area, |a, (ix, iy)| {
-        a - signed_area(vertices, ix * DIM, iy * DIM).abs()
-    });
-
-    let i = triangles.iter().skip(0).step_by(3).map(|x| x * DIM);
-    let j = triangles.iter().skip(1).step_by(3).map(|x| x * DIM);
-    let k = triangles.iter().skip(2).step_by(3).map(|x| x * DIM);
-    let triangles_area = i.zip(j).zip(k).fold(T::zero(), |ta, ((a, b), c)| {
-        ta + ((vertices[a] - vertices[c]) * (vertices[b + 1] - vertices[a + 1])
-            - (vertices[a] - vertices[b]) * (vertices[c + 1] - vertices[a + 1]))
-            .abs()
-    });
-
-    match polygon_area.is_zero() && triangles_area.is_zero() {
-        true => T::zero(),
-        false => ((triangles_area - polygon_area) / polygon_area).abs(),
-    }
 }
 
 fn signed_area<T: Float + Display>(vertices: &[T], start: VerticesIndex, end: VerticesIndex) -> T {
