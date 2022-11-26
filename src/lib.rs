@@ -279,10 +279,10 @@ fn eliminate_holes<T: Float + Display>(
         };
         let (list, leftmost_idx) =
             linked_list_add_contour(ll, vertices, vertices_hole_start_index, vertices_hole_end_index, false);
-        if list == Some(ll.nodes[list.unwrap()].next_idx) {
-            nodemut!(ll, list.unwrap()).is_steiner_point = true;
+        if list == ll.nodes[list].next_idx {
+            nodemut!(ll, list).is_steiner_point = true;
         }
-        queue.push(node!(ll, leftmost_idx.unwrap()));
+        queue.push(node!(ll, leftmost_idx));
     }
 
     queue.sort_by(compare_x);
@@ -704,7 +704,7 @@ fn linked_list<T: Float + Display>(
     start: usize,
     end: usize,
     clockwise: bool,
-) -> (LinkedLists<T>, Option<NodeIdx>) {
+) -> (LinkedLists<T>, NodeIdx) {
     let mut ll: LinkedLists<T> = LinkedLists::new(vertices.len() / DIM);
     if vertices.len() < 80 {
         ll.usehash = false
@@ -720,10 +720,13 @@ fn linked_list_add_contour<T: Float + Display>(
     start: VerticesIndex,
     end: VerticesIndex,
     clockwise: bool,
-) -> (Option<NodeIdx>, Option<NodeIdx>) {
-    if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
-        return (None, None);
-    }
+) -> (NodeIdx, NodeIdx) {
+    assert!(start <= vertices.len() && end <= vertices.len() && !vertices.is_empty());
+    // Previous code:
+    //
+    // if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
+    //     return (None, None);
+    // }
     let mut lastidx = None;
     let mut leftmost_idx = None;
     let mut contour_minx = T::max_value();
@@ -762,7 +765,7 @@ fn linked_list_add_contour<T: Float + Display>(
         ll.remove_node(lastidx.unwrap());
         lastidx = Some(ll.nodes[lastidx.unwrap()].next_idx);
     }
-    (lastidx, leftmost_idx)
+    (lastidx.unwrap(), leftmost_idx.unwrap())
 }
 
 // z-order of a point given coords and inverse of the longer side of
@@ -816,7 +819,7 @@ pub fn earcut<T: Float + Display>(vertices: &[T], hole_indices: &[usize], dims: 
         return triangles.0;
     }
 
-    let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node.unwrap());
+    let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node);
 
     if ll.usehash {
         ll.invsize = calc_invsize(ll.minx, ll.miny, ll.maxx, ll.maxy);
