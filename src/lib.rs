@@ -71,9 +71,6 @@ macro_rules! dlog {
 	)
 }
 
-// macro design: built so we can easily swap unchecked for checked,
-// to test speed. and because unsafe get_ funcs have different meaning
-// than bracket operator (indexing operator) nodes[index]
 macro_rules! node {
     ($ll:expr,$idx:expr) => {
         $ll.nodes[$idx]
@@ -92,38 +89,22 @@ macro_rules! next {
 }
 macro_rules! nextref {
     ($ll:expr,$idx:expr) => {
-        unsafe {
-            $ll.nodes
-                .get_unchecked($ll.nodes.get_unchecked($idx).next_linked_list_node_index)
-        }
-        //&$ll.nodes[$ll.nodes[$idx].next_idx]
+        &$ll.nodes[$ll.nodes[$idx].next_linked_list_node_index]
     };
 }
 macro_rules! prev {
     ($ll:expr,$idx:expr) => {
-        unsafe {
-            $ll.nodes
-                .get_unchecked($ll.nodes.get_unchecked($idx).prev_linked_list_node_index)
-        }
-        //$ll.nodes[$ll.nodes[$idx].prev_idx]
+        $ll.nodes[$ll.nodes[$idx].prev_linked_list_node_index]
     };
 }
 macro_rules! prevref {
     ($ll:expr,$idx:expr) => {
-        unsafe {
-            $ll.nodes
-                .get_unchecked($ll.nodes.get_unchecked($idx).prev_linked_list_node_index)
-        }
-        //&$ll.nodes[$ll.nodes[$idx].prev_idx]
+        &$ll.nodes[$ll.nodes[$idx].prev_linked_list_node_index]
     };
 }
 macro_rules! prevz {
     ($ll:expr,$idx:expr) => {
         &$ll.nodes[$ll.nodes[$idx].prevz_idx]
-        /*unsafe {
-            $ll.nodes
-                .get_unchecked($ll.nodes.get_unchecked($idx).prevz_idx)
-        }*/
     };
 }
 
@@ -1072,12 +1053,12 @@ fn is_valid_diagonal<T: Float + Display>(
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
 ) -> bool {
-    return next!(ll, a.idx).vertices_index != b.vertices_index
+    next!(ll, a.idx).vertices_index != b.vertices_index
         && prev!(ll, a.idx).vertices_index != b.vertices_index
         && !intersects_polygon(ll, *a, *b)
         && locally_inside(ll, a, b)
         && locally_inside(ll, b, a)
-        && middle_inside(ll, a, b);
+        && middle_inside(ll, a, b)
 }
 
 /* check if two segments cross over each other. note this is different
