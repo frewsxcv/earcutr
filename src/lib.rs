@@ -9,7 +9,7 @@ static DEBUG: usize = 0; // dlogs get optimized away at 0
 type NodeIdx = usize;
 type VertIdx = usize;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Node<T: Float + Display> {
     /// vertex index in flat one-d array of 64bit float coords
     data_index: VertIdx,
@@ -379,7 +379,7 @@ fn earcut_linked_unhashed<T: Float + Display>(
     while stop_idx != next_idx {
         prev_idx = node!(ll, ear_idx).prev_idx;
         next_idx = node!(ll, ear_idx).next_idx;
-        if is_ear(ll, prev_idx, ear_idx, next_idx) {
+        if NodeIndexTriangle(prev_idx, ear_idx, next_idx).is_ear(ll) {
             triangles.push(
                 node!(ll, prev_idx).data_index,
                 node!(ll, ear_idx).data_index,
@@ -492,21 +492,38 @@ fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: NodeIdx) {
     }
 }
 
-// check whether a polygon node forms a valid ear with adjacent nodes
-fn is_ear<T: Float + Display>(
-    ll: &LinkedLists<T>,
-    prev: NodeIdx,
-    ear: NodeIdx,
-    next: NodeIdx,
-) -> bool {
-    let (a, b, c) = (&ll.nodes[prev], &ll.nodes[ear], &ll.nodes[next]);
-    let zero = T::zero();
-    match area(a, b, c) >= zero {
-        true => false, // reflex, cant be ear
-        false => !ll.iter(c.next_idx..a.idx).any(|p| {
-            point_in_triangle(a, b, c, p)
-                && (area(prevref!(ll, p.idx), p, nextref!(ll, p.idx)) >= zero)
-        }),
+#[derive(Clone, Copy)]
+struct NodeIndexTriangle(NodeIdx, NodeIdx, NodeIdx);
+
+impl NodeIndexTriangle {
+    fn prev_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+        ll.nodes[self.0]
+    }
+
+    fn ear_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+        ll.nodes[self.1]
+    }
+
+    fn next_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> Node<T> {
+        ll.nodes[self.2]
+    }
+
+    fn area<T: Float + Display>(self, ll: &LinkedLists<T>) -> T {
+        let (p, q, r) = (self.prev_node(ll), self.ear_node(ll), self.next_node(ll));
+        // signed area of a parallelogram
+        (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
+    }
+
+    // check whether a polygon node forms a valid ear with adjacent nodes
+    fn is_ear<T: Float + Display>(self, ll: &LinkedLists<T>) -> bool {
+        let zero = T::zero();
+        match self.area(ll) >= zero {
+            true => false, // reflex, cant be ear
+            false => !ll.iter(self.next_node(ll).next_idx..self.prev_node(ll).idx).any(|p| {
+                point_in_triangle(self.prev_node(ll), self.ear_node(ll), self.next_node(ll), *p)
+                    && (area(prevref!(ll, p.idx), p, nextref!(ll, p.idx)) >= zero)
+            }),
+        }
     }
 }
 
@@ -524,7 +541,7 @@ fn earcheck<T: Float + Display>(
 
     (p.idx != a.idx)
         && (p.idx != c.idx)
-        && point_in_triangle(a, b, c, p)
+        && point_in_triangle(*a, *b, *c, *p)
         && area(prev, p, next) >= zero
 }
 
@@ -755,10 +772,10 @@ fn zorder<T: Float + Display>(xf: T, yf: T, invsize: T) -> i32 {
 
 // check if a point lies within a convex triangle
 fn point_in_triangle<T: Float + Display>(
-    a: &Node<T>,
-    b: &Node<T>,
-    c: &Node<T>,
-    p: &Node<T>,
+    a: Node<T>,
+    b: Node<T>,
+    c: Node<T>,
+    p: Node<T>,
 ) -> bool {
     let zero = T::zero();
 
@@ -809,11 +826,6 @@ pub fn earcut<T: Float + Display>(data: &[T], hole_indices: &[usize], dims: usiz
     }
 
     triangles.0
-}
-
-// signed area of a parallelogram
-fn area<T: Float + Display>(p: &Node<T>, q: &Node<T>, r: &Node<T>) -> T {
-    (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
 }
 
 /* go through all polygon nodes and cure small local self-intersections
@@ -993,7 +1005,7 @@ fn find_hole_bridge<T: Float + Display>(
     let calctan = |p: &Node<T>| (hy - p.y).abs() / (hx - p.x); // tangential
     ll.iter(p..m)
         .filter(|p| hx > p.x && p.x >= mp.x)
-        .filter(|p| point_in_triangle(&n1, &mp, &n2, p))
+        .filter(|p| point_in_triangle(n1, mp, n2, **p))
         .fold((m, T::max_value() / two), |(m, tan_min), p| {
             if ((calctan(p) < tan_min) || (calctan(p) == tan_min && p.x > ll.nodes[m].x))
                 && locally_inside(ll, p, &ll.nodes[hole])
@@ -1071,6 +1083,10 @@ fn intersects_polygon<T: Float + Display>(ll: &LinkedLists<T>, a: &Node<T>, b: &
             && n.data_index != b.data_index
             && pseudo_intersects(p, n, a, b)
     })
+}
+
+fn area<T: Float + Display>(p: &Node<T>, q: &Node<T>, r: &Node<T>) -> T {
+    (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
 }
 
 // check if a polygon diagonal is locally inside the polygon
@@ -1513,10 +1529,10 @@ mod tests {
         let data = vec![0.0, 0.0, 2.0, 0.0, 2.0, 2.0, 1.0, 0.1];
         let (ll, _) = linked_list(&data, 0, data.len(), true);
         assert!(point_in_triangle(
-            &ll.nodes[1],
-            &ll.nodes[2],
-            &ll.nodes[3],
-            &ll.nodes[4]
+            ll.nodes[1],
+            ll.nodes[2],
+            ll.nodes[3],
+            ll.nodes[4]
         ));
     }
 
@@ -1580,24 +1596,24 @@ mod tests {
     fn test_is_ear() {
         let m = vec![0.0, 0.0, 0.5, 0.0, 1.0, 0.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
-        assert!(!is_ear(&ll, 1, 2, 3));
-        assert!(!is_ear(&ll, 2, 3, 1));
-        assert!(!is_ear(&ll, 3, 1, 2));
+        assert!(!NodeIndexTriangle(1, 2, 3).is_ear(&ll));
+        assert!(!NodeIndexTriangle(2, 3, 1).is_ear(&ll));
+        assert!(!NodeIndexTriangle(3, 1, 2).is_ear(&ll));
 
         let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0, 0.5, 0.4];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
-        assert!(!is_ear(&ll, 4, 1, 2));
-        assert!(is_ear(&ll, 1, 2, 3));
-        assert!(!is_ear(&ll, 2, 3, 4));
-        assert!(is_ear(&ll, 3, 4, 1));
+        assert!(!NodeIndexTriangle(4, 1, 2).is_ear(&ll));
+        assert!(NodeIndexTriangle(1, 2, 3).is_ear(&ll));
+        assert!(!NodeIndexTriangle(2, 3, 4).is_ear(&ll));
+        assert!(NodeIndexTriangle(3, 4, 1).is_ear(&ll));
 
         let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
-        assert!(is_ear(&ll, 3, 1, 2));
+        assert!(NodeIndexTriangle(3, 1, 2).is_ear(&ll));
 
         let m = vec![0.0, 0.0, 4.0, 0.0, 4.0, 3.0];
         let (ll, _) = linked_list(&m, 0, m.len(), true);
-        assert!(is_ear(&ll, 3, 1, 2));
+        assert!(NodeIndexTriangle(3, 1, 2).is_ear(&ll));
     }
 
     #[test]
