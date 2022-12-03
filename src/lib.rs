@@ -1,6 +1,6 @@
 use num_traits::float::Float;
-use std::{ops, cmp};
 use std::fmt::Display;
+use std::{cmp, ops};
 
 static DIM: usize = 2;
 static NULL: usize = 0;
@@ -13,8 +13,8 @@ mod tests;
 #[doc(hidden)]
 pub mod legacy;
 
-pub use legacy::flatten;
 pub use legacy::deviation;
+pub use legacy::flatten;
 
 type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
@@ -212,12 +212,12 @@ impl<'a, T: Float + Display> Iterator for NodeIterator<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.cur = self.ll.nodes[self.cur].next_linked_list_node_index;
         let cur_result = self.pending_result;
-        if self.cur == self.end {
+        self.pending_result = if self.cur == self.end {
             // only one branch, saves time
-            self.pending_result = None;
+            None
         } else {
-            self.pending_result = Some(&self.ll.nodes[self.cur]);
-        }
+            Some(&self.ll.nodes[self.cur])
+        };
         cur_result
     }
 }
