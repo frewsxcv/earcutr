@@ -1,4 +1,5 @@
 use num_traits::float::Float;
+use std::cmp;
 use std::fmt::Display;
 
 static DIM: usize = 2;
@@ -256,13 +257,6 @@ impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
     }
 }
 
-fn compare_x<T: Float + Display>(
-    a: &LinkedListNode<T>,
-    b: &LinkedListNode<T>,
-) -> std::cmp::Ordering {
-    a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
-}
-
 // link every hole into the outer loop, producing a single-ring polygon
 // without holes
 fn eliminate_holes<T: Float + Display>(
@@ -293,7 +287,7 @@ fn eliminate_holes<T: Float + Display>(
         queue.push(node!(ll, leftmost_idx));
     }
 
-    queue.sort_by(compare_x);
+    queue.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(cmp::Ordering::Equal));
 
     // process holes from left to right
     for node in queue {
