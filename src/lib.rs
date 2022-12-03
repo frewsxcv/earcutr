@@ -1,5 +1,5 @@
 use num_traits::float::Float;
-use std::cmp;
+use std::{ops, cmp};
 use std::fmt::Display;
 
 static DIM: usize = 2;
@@ -115,12 +115,14 @@ macro_rules! prevz {
 }
 
 impl<T: Float + Display> LinkedLists<T> {
-    fn iter(&self, r: std::ops::Range<LinkedListNodeIndex>) -> NodeIterator<T> {
-        return NodeIterator::new(self, r.start, r.end);
+    fn iter(&self, r: ops::Range<LinkedListNodeIndex>) -> NodeIterator<T> {
+        NodeIterator::new(self, r.start, r.end)
     }
-    fn iter_pairs(&self, r: std::ops::Range<LinkedListNodeIndex>) -> NodePairIterator<T> {
-        return NodePairIterator::new(self, r.start, r.end);
+
+    fn iter_pairs(&self, r: ops::Range<LinkedListNodeIndex>) -> NodePairIterator<T> {
+        NodePairIterator::new(self, r.start, r.end)
     }
+
     fn insert_node(
         &mut self,
         i: VerticesIndex,
