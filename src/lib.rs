@@ -1170,7 +1170,7 @@ fn middle_inside<T: Float + Display>(
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
 ) -> bool {
-    let two = num_traits::cast::<f64, T>(2.0).unwrap();
+    let two = T::one() + T::one();
 
     let (mx, my) = ((a.x + b.x) / two, (a.y + b.y) / two);
     ll.iter_pairs(a.idx..a.idx)
