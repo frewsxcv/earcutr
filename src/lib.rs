@@ -699,10 +699,9 @@ fn filter_points<T: Float + Display>(
             }
             again = true;
         } else {
-            debug_assert!(
-                p != ll.nodes[p].next_linked_list_node_index,
-                "the next node cannot be the current node"
-            );
+            if p == ll.nodes[p].next_linked_list_node_index {
+                break NULL;
+            }
             p = ll.nodes[p].next_linked_list_node_index;
         }
         if !again && p == end {
