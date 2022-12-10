@@ -75,6 +75,27 @@ pub struct LinkedLists<T: Float + Display> {
     usehash: bool,
 }
 
+struct Vertices<'a, T: Float + Display>(&'a [T]);
+
+impl<'a, T: Float + Display> Vertices<'a, T> {
+    fn is_empty(&'a self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn len(&'a self) -> usize {
+        self.0.len()
+    }
+
+    fn signed_area(&self, start: VerticesIndex, end: VerticesIndex) -> T {
+        let i = (start..end).step_by(DIM);
+        let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
+        let zero = T::zero();
+        i.zip(j).fold(zero, |s, (i, j)| {
+            s + (self.0[j] - self.0[i]) * (self.0[i + 1] + self.0[j + 1])
+        })
+    }
+}
+
 macro_rules! dlog {
 	($loglevel:expr, $($s:expr),*) => (
 		if DEBUG>=$loglevel { print!("{}:",$loglevel); println!($($s),+); }
@@ -263,7 +284,7 @@ impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
 // without holes
 fn eliminate_holes<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    vertices: &[T],
+    vertices: &Vertices<T>,
     hole_indices: &[VerticesIndex],
     inouter_node: LinkedListNodeIndex,
 ) -> LinkedListNodeIndex {
@@ -274,7 +295,7 @@ fn eliminate_holes<T: Float + Display>(
         let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
             hole_indices[i + 1] * DIM
         } else {
-            vertices.len()
+            vertices.0.len()
         };
         let (list, leftmost_idx) = linked_list_add_contour(
             ll,
@@ -713,7 +734,7 @@ fn filter_points<T: Float + Display>(
 // create a circular doubly linked list from polygon points in the
 // specified winding order
 fn linked_list<T: Float + Display>(
-    vertices: &[T],
+    vertices: &Vertices<T>,
     start: usize,
     end: usize,
     clockwise: bool,
@@ -729,7 +750,7 @@ fn linked_list<T: Float + Display>(
 // add new nodes to an existing linked list.
 fn linked_list_add_contour<T: Float + Display>(
     ll: &mut LinkedLists<T>,
-    vertices: &[T],
+    vertices: &Vertices<T>,
     start: VerticesIndex,
     end: VerticesIndex,
     clockwise: bool,
@@ -744,30 +765,30 @@ fn linked_list_add_contour<T: Float + Display>(
     let mut leftmost_idx = None;
     let mut contour_minx = T::max_value();
 
-    if clockwise == (signed_area(vertices, start, end) > T::zero()) {
+    if clockwise == (vertices.signed_area(start, end) > T::zero()) {
         for i in (start..end).step_by(DIM) {
-            lastidx = Some(ll.insert_node(i / DIM, vertices[i], vertices[i + 1], lastidx));
-            if contour_minx > vertices[i] {
-                contour_minx = vertices[i];
+            lastidx = Some(ll.insert_node(i / DIM, vertices.0[i], vertices.0[i + 1], lastidx));
+            if contour_minx > vertices.0[i] {
+                contour_minx = vertices.0[i];
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(vertices[i + 1], ll.miny);
-                ll.maxx = T::max(vertices[i], ll.maxx);
-                ll.maxy = T::max(vertices[i + 1], ll.maxy);
+                ll.miny = T::min(vertices.0[i + 1], ll.miny);
+                ll.maxx = T::max(vertices.0[i], ll.maxx);
+                ll.maxy = T::max(vertices.0[i + 1], ll.maxy);
             }
         }
     } else {
         for i in (start..=(end - DIM)).rev().step_by(DIM) {
-            lastidx = Some(ll.insert_node(i / DIM, vertices[i], vertices[i + 1], lastidx));
-            if contour_minx > vertices[i] {
-                contour_minx = vertices[i];
+            lastidx = Some(ll.insert_node(i / DIM, vertices.0[i], vertices.0[i + 1], lastidx));
+            if contour_minx > vertices.0[i] {
+                contour_minx = vertices.0[i];
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(vertices[i + 1], ll.miny);
-                ll.maxx = T::max(vertices[i], ll.maxx);
-                ll.maxy = T::max(vertices[i + 1], ll.maxy);
+                ll.miny = T::min(vertices.0[i + 1], ll.miny);
+                ll.maxx = T::max(vertices.0[i], ll.maxx);
+                ll.maxy = T::max(vertices.0[i + 1], ll.maxy);
             }
         }
     }
@@ -827,13 +848,14 @@ pub fn earcut<T: Float + Display>(
         _ => hole_indices[0] * DIM,
     };
 
-    let (mut ll, outer_node) = linked_list(vertices, 0, outer_len, true);
+    let vertices = Vertices(vertices);
+    let (mut ll, outer_node) = linked_list(&vertices, 0, outer_len, true);
     let mut triangles = FinalTriangleIndices(Vec::with_capacity(vertices.len() / DIM));
     if ll.nodes.len() == 1 || DIM != dims {
         return triangles.0;
     }
 
-    let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node);
+    let outer_node = eliminate_holes(&mut ll, &vertices, hole_indices, outer_node);
 
     if ll.usehash {
         ll.invsize = calc_invsize(ll.minx, ll.miny, ll.maxx, ll.maxy);
@@ -1268,13 +1290,4 @@ fn split_bridge_polygon<T: Float + Display>(
     ll.nodes.push(c);
     ll.nodes.push(d);
     didx
-}
-
-fn signed_area<T: Float + Display>(vertices: &[T], start: VerticesIndex, end: VerticesIndex) -> T {
-    let i = (start..end).step_by(DIM);
-    let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
-    let zero = T::zero();
-    i.zip(j).fold(zero, |s, (i, j)| {
-        s + (vertices[j] - vertices[i]) * (vertices[i + 1] + vertices[j + 1])
-    })
 }

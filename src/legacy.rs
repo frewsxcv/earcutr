@@ -99,20 +99,21 @@ pub fn deviation<T: Float + Display>(
     if DIM != dims {
         return T::nan();
     }
+    let vertices = crate::Vertices(vertices);
     let mut indices = hole_indices.to_vec();
     indices.push(vertices.len() / DIM);
     let (ix, iy) = (indices.iter(), indices.iter().skip(1));
-    let body_area = signed_area(vertices, 0, indices[0] * DIM).abs();
+    let body_area = vertices.signed_area(0, indices[0] * DIM).abs();
     let polygon_area = ix.zip(iy).fold(body_area, |a, (ix, iy)| {
-        a - signed_area(vertices, ix * DIM, iy * DIM).abs()
+        a - vertices.signed_area(ix * DIM, iy * DIM).abs()
     });
 
     let i = triangles.iter().skip(0).step_by(3).map(|x| x * DIM);
     let j = triangles.iter().skip(1).step_by(3).map(|x| x * DIM);
     let k = triangles.iter().skip(2).step_by(3).map(|x| x * DIM);
     let triangles_area = i.zip(j).zip(k).fold(T::zero(), |ta, ((a, b), c)| {
-        ta + ((vertices[a] - vertices[c]) * (vertices[b + 1] - vertices[a + 1])
-            - (vertices[a] - vertices[b]) * (vertices[c + 1] - vertices[a + 1]))
+        ta + ((vertices.0[a] - vertices.0[c]) * (vertices.0[b + 1] - vertices.0[a + 1])
+            - (vertices.0[a] - vertices.0[b]) * (vertices.0[c + 1] - vertices.0[a + 1]))
             .abs()
     });
 
