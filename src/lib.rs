@@ -226,6 +226,19 @@ impl<T: Float + Display> LinkedLists<T> {
         self.nodes[start].prevz_idx = NULL;
         sort_linked(self, start);
     }
+
+    // find a bridge between vertices that connects hole with an outer ring
+    // and and link it
+    fn eliminate_hole(
+        &mut self,
+        hole_idx: LinkedListNodeIndex,
+        outer_node_idx: LinkedListNodeIndex,
+    ) {
+        let test_idx = find_hole_bridge(self, hole_idx, outer_node_idx);
+        let b = split_bridge_polygon(self, test_idx, hole_idx);
+        let ni = node!(self, b).next_linked_list_node_index;
+        filter_points(self, b, Some(ni));
+    }
 }
 
 struct NodeIterator<'a, T: Float + Display> {
@@ -336,7 +349,7 @@ fn eliminate_holes<T: Float + Display>(
 
     // process holes from left to right
     for node in queue {
-        eliminate_hole(ll, node.idx, outer_node);
+        ll.eliminate_hole(node.idx, outer_node);
         let nextidx = next!(ll, outer_node).idx;
         outer_node = filter_points(ll, outer_node, Some(nextidx));
     }
@@ -983,19 +996,6 @@ fn split_earcut<T: Float + Display>(
             break;
         }
     }
-}
-
-// find a bridge between vertices that connects hole with an outer ring
-// and and link it
-fn eliminate_hole<T: Float + Display>(
-    ll: &mut LinkedLists<T>,
-    hole_idx: LinkedListNodeIndex,
-    outer_node_idx: LinkedListNodeIndex,
-) {
-    let test_idx = find_hole_bridge(ll, hole_idx, outer_node_idx);
-    let b = split_bridge_polygon(ll, test_idx, hole_idx);
-    let ni = node!(ll, b).next_linked_list_node_index;
-    filter_points(ll, b, Some(ni));
 }
 
 // David Eberly's algorithm for finding a bridge between hole and outer polygon
