@@ -102,12 +102,6 @@ macro_rules! dlog {
 	)
 }
 
-macro_rules! node {
-    ($ll:expr,$idx:expr) => {
-        $ll.nodes[$idx]
-    };
-}
-
 // Note: none of the following macros work for Left-Hand-Side of assignment.
 macro_rules! next {
     ($ll:expr,$idx:expr) => {
@@ -210,12 +204,12 @@ impl<T: Float + Display> LinkedLists<T> {
         let invsize = self.invsize;
         let mut p = start;
         loop {
-            if node!(self, p).z == 0 {
-                self.nodes[p].z = zorder(node!(self, p).x, node!(self, p).y, invsize);
+            if self.nodes[p].z == 0 {
+                self.nodes[p].z = zorder(self.nodes[p].x, self.nodes[p].y, invsize);
             }
-            self.nodes[p].prevz_idx = node!(self, p).prev_linked_list_node_index;
-            self.nodes[p].nextz_idx = node!(self, p).next_linked_list_node_index;
-            p = node!(self, p).next_linked_list_node_index;
+            self.nodes[p].prevz_idx = self.nodes[p].prev_linked_list_node_index;
+            self.nodes[p].nextz_idx = self.nodes[p].next_linked_list_node_index;
+            p = self.nodes[p].next_linked_list_node_index;
             if p == start {
                 break;
             }
@@ -236,7 +230,7 @@ impl<T: Float + Display> LinkedLists<T> {
     ) {
         let test_idx = find_hole_bridge(self, hole_idx, outer_node_idx);
         let b = split_bridge_polygon(self, test_idx, hole_idx);
-        let ni = node!(self, b).next_linked_list_node_index;
+        let ni = self.nodes[b].next_linked_list_node_index;
         filter_points(self, b, Some(ni));
     }
 }
@@ -303,7 +297,7 @@ impl<'a, T: Float + Display> NodePairIterator<'a, T> {
 impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
     type Item = (&'a LinkedListNode<T>, &'a LinkedListNode<T>);
     fn next(&mut self) -> Option<Self::Item> {
-        self.cur = node!(self.ll, self.cur).next_linked_list_node_index;
+        self.cur = self.ll.nodes[self.cur].next_linked_list_node_index;
         let cur_result = self.pending_result;
         if self.cur == self.end {
             // only one branch, saves time
@@ -342,7 +336,7 @@ fn eliminate_holes<T: Float + Display>(
         if list == ll.nodes[list].next_linked_list_node_index {
             ll.nodes[list].is_steiner_point = true;
         }
-        queue.push(node!(ll, leftmost_idx));
+        queue.push(ll.nodes[leftmost_idx]);
     }
 
     queue.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(cmp::Ordering::Equal));
@@ -381,20 +375,20 @@ fn earcut_linked_hashed<T: Float + Display>(
     // iterate through ears, slicing them one by one
     let mut stop_idx = ear_idx;
     let mut prev_idx = 0;
-    let mut next_idx = node!(ll, ear_idx).next_linked_list_node_index;
+    let mut next_idx = ll.nodes[ear_idx].next_linked_list_node_index;
     while stop_idx != next_idx {
-        prev_idx = node!(ll, ear_idx).prev_linked_list_node_index;
-        next_idx = node!(ll, ear_idx).next_linked_list_node_index;
+        prev_idx = ll.nodes[ear_idx].prev_linked_list_node_index;
+        next_idx = ll.nodes[ear_idx].next_linked_list_node_index;
         let node_index_triangle = NodeIndexTriangle(prev_idx, ear_idx, next_idx);
         if node_index_triangle.node_triangle(ll).is_ear_hashed(ll) {
             triangle_indices.push(VerticesIndexTriangle(
-                node!(ll, prev_idx).vertices_index,
-                node!(ll, ear_idx).vertices_index,
-                node!(ll, next_idx).vertices_index,
+                ll.nodes[prev_idx].vertices_index,
+                ll.nodes[ear_idx].vertices_index,
+                ll.nodes[next_idx].vertices_index,
             ));
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
-            ear_idx = node!(ll, next_idx).next_linked_list_node_index;
+            ear_idx = ll.nodes[next_idx].next_linked_list_node_index;
             stop_idx = ear_idx;
         } else {
             ear_idx = next_idx;
@@ -428,19 +422,19 @@ fn earcut_linked_unhashed<T: Float + Display>(
     // iterate through ears, slicing them one by one
     let mut stop_idx = ear_idx;
     let mut prev_idx = 0;
-    let mut next_idx = node!(ll, ear_idx).next_linked_list_node_index;
+    let mut next_idx = ll.nodes[ear_idx].next_linked_list_node_index;
     while stop_idx != next_idx {
-        prev_idx = node!(ll, ear_idx).prev_linked_list_node_index;
-        next_idx = node!(ll, ear_idx).next_linked_list_node_index;
+        prev_idx = ll.nodes[ear_idx].prev_linked_list_node_index;
+        next_idx = ll.nodes[ear_idx].next_linked_list_node_index;
         if NodeIndexTriangle(prev_idx, ear_idx, next_idx).is_ear(ll) {
             triangles.push(VerticesIndexTriangle(
-                node!(ll, prev_idx).vertices_index,
-                node!(ll, ear_idx).vertices_index,
-                node!(ll, next_idx).vertices_index,
+                ll.nodes[prev_idx].vertices_index,
+                ll.nodes[ear_idx].vertices_index,
+                ll.nodes[next_idx].vertices_index,
             ));
             ll.remove_node(ear_idx);
             // skipping the next vertex leads to less sliver triangles
-            ear_idx = node!(ll, next_idx).next_linked_list_node_index;
+            ear_idx = ll.nodes[next_idx].next_linked_list_node_index;
             stop_idx = ear_idx;
         } else {
             ear_idx = next_idx;
@@ -619,7 +613,7 @@ impl<T: Float + Display> NodeTriangle<T> {
 
         let mut p = ear.prevz_idx;
         let mut n = ear.nextz_idx;
-        while (p != NULL) && (node!(ll, p).z >= min_z) && (n != NULL) && (node!(ll, n).z <= max_z) {
+        while (p != NULL) && (ll.nodes[p].z >= min_z) && (n != NULL) && (ll.nodes[n].z <= max_z) {
             if earcheck(
                 prev,
                 ear,
@@ -630,7 +624,7 @@ impl<T: Float + Display> NodeTriangle<T> {
             ) {
                 return false;
             }
-            p = node!(ll, p).prevz_idx;
+            p = ll.nodes[p].prevz_idx;
 
             if earcheck(
                 prev,
@@ -642,11 +636,11 @@ impl<T: Float + Display> NodeTriangle<T> {
             ) {
                 return false;
             }
-            n = node!(ll, n).nextz_idx;
+            n = ll.nodes[n].nextz_idx;
         }
 
         ll.nodes[NULL].z = min_z - 1;
-        while node!(ll, p).z >= min_z {
+        while ll.nodes[p].z >= min_z {
             if earcheck(
                 prev,
                 ear,
@@ -657,11 +651,11 @@ impl<T: Float + Display> NodeTriangle<T> {
             ) {
                 return false;
             }
-            p = node!(ll, p).prevz_idx;
+            p = ll.nodes[p].prevz_idx;
         }
 
         ll.nodes[NULL].z = max_z + 1;
-        while node!(ll, n).z <= max_z {
+        while ll.nodes[n].z <= max_z {
             if earcheck(
                 prev,
                 ear,
@@ -672,7 +666,7 @@ impl<T: Float + Display> NodeTriangle<T> {
             ) {
                 return false;
             }
-            n = node!(ll, n).nextz_idx;
+            n = ll.nodes[n].nextz_idx;
         }
 
         true
@@ -719,7 +713,7 @@ fn filter_points<T: Float + Display>(
     // the algorithm of other code that calls the filter_points function.
     loop {
         again = false;
-        if !node!(ll, p).is_steiner_point
+        if !ll.nodes[p].is_steiner_point
             && (ll.nodes[p].xy_eq(ll.nodes[ll.nodes[p].next_linked_list_node_index])
                 || NodeTriangle::from_ear_node(ll.nodes[p], ll)
                     .area()
@@ -924,7 +918,7 @@ fn cure_local_intersections<T: Float + Display>(
     //                            a p  pn b
 
     loop {
-        let a = node!(ll, p).prev_linked_list_node_index;
+        let a = ll.nodes[p].prev_linked_list_node_index;
         let b = next!(ll, p).next_linked_list_node_index;
 
         if !ll.nodes[a].xy_eq(ll.nodes[b])
@@ -1005,8 +999,8 @@ fn find_hole_bridge<T: Float + Display>(
     outer_node: LinkedListNodeIndex,
 ) -> LinkedListNodeIndex {
     let mut p = outer_node;
-    let hx = node!(ll, hole).x;
-    let hy = node!(ll, hole).y;
+    let hx = ll.nodes[hole].x;
+    let hy = ll.nodes[hole].y;
     let mut qx = T::neg_infinity();
     let mut m: Option<LinkedListNodeIndex> = None;
 
@@ -1045,7 +1039,7 @@ fn find_hole_bridge<T: Float + Display>(
     // a valid connection; otherwise choose the point of the minimum
     // angle with the ray as connection point
 
-    let mp = LinkedListNode::new(0, node!(ll, m).x, node!(ll, m).y, 0);
+    let mp = LinkedListNode::new(0, ll.nodes[m].x, ll.nodes[m].y, 0);
     p = next!(ll, m).idx;
     let x1 = if hy < mp.y { hx } else { qx };
     let x2 = if hy < mp.y { qx } else { hx };
