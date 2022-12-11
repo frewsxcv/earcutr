@@ -204,6 +204,28 @@ impl<T: Float + Display> LinkedLists<T> {
         });
         ll
     }
+
+    // interlink polygon nodes in z-order
+    fn index_curve(&mut self, start: LinkedListNodeIndex) {
+        let invsize = self.invsize;
+        let mut p = start;
+        loop {
+            if node!(self, p).z == 0 {
+                self.nodes[p].z = zorder(node!(self, p).x, node!(self, p).y, invsize);
+            }
+            self.nodes[p].prevz_idx = node!(self, p).prev_linked_list_node_index;
+            self.nodes[p].nextz_idx = node!(self, p).next_linked_list_node_index;
+            p = node!(self, p).next_linked_list_node_index;
+            if p == start {
+                break;
+            }
+        }
+
+        let pzi = prevz!(self, start).idx;
+        self.nodes[pzi].nextz_idx = NULL;
+        self.nodes[start].prevz_idx = NULL;
+        sort_linked(self, start);
+    }
 }
 
 struct NodeIterator<'a, T: Float + Display> {
@@ -341,7 +363,7 @@ fn earcut_linked_hashed<T: Float + Display>(
 ) {
     // interlink polygon nodes in z-order
     if pass == 0 {
-        index_curve(ll, ear_idx);
+        ll.index_curve(ear_idx);
     }
     // iterate through ears, slicing them one by one
     let mut stop_idx = ear_idx;
@@ -426,28 +448,6 @@ fn earcut_linked_unhashed<T: Float + Display>(
     } else if pass == 2 {
         split_earcut(ll, next_idx, triangles);
     }
-}
-
-// interlink polygon nodes in z-order
-fn index_curve<T: Float + Display>(ll: &mut LinkedLists<T>, start: LinkedListNodeIndex) {
-    let invsize = ll.invsize;
-    let mut p = start;
-    loop {
-        if node!(ll, p).z == 0 {
-            ll.nodes[p].z = zorder(node!(ll, p).x, node!(ll, p).y, invsize);
-        }
-        ll.nodes[p].prevz_idx = node!(ll, p).prev_linked_list_node_index;
-        ll.nodes[p].nextz_idx = node!(ll, p).next_linked_list_node_index;
-        p = node!(ll, p).next_linked_list_node_index;
-        if p == start {
-            break;
-        }
-    }
-
-    let pzi = prevz!(ll, start).idx;
-    ll.nodes[pzi].nextz_idx = NULL;
-    ll.nodes[start].prevz_idx = NULL;
-    sort_linked(ll, start);
 }
 
 // Simon Tatham's linked list merge sort algorithm
