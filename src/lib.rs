@@ -1,5 +1,4 @@
 use num_traits::float::Float;
-use std::fmt::Display;
 use std::{cmp, ops};
 
 static DIM: usize = 2;
@@ -20,13 +19,13 @@ type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Coord<T: Float + Display> {
+struct Coord<T: Float> {
     x: T,
     y: T,
 }
 
 #[derive(Clone, Copy, Debug)]
-struct LinkedListNode<T: Float + Display> {
+struct LinkedListNode<T: Float> {
     /// vertex index in flat one-d array of 64bit float coords
     vertices_index: VerticesIndex,
     /// vertex
@@ -47,7 +46,7 @@ struct LinkedListNode<T: Float + Display> {
     idx: LinkedListNodeIndex,
 }
 
-impl<T: Float + Display> LinkedListNode<T> {
+impl<T: Float> LinkedListNode<T> {
     fn new(i: VerticesIndex, coord: Coord<T>, idx: LinkedListNodeIndex) -> LinkedListNode<T> {
         LinkedListNode {
             vertices_index: i,
@@ -68,7 +67,7 @@ impl<T: Float + Display> LinkedListNode<T> {
     }
 }
 
-pub struct LinkedLists<T: Float + Display> {
+pub struct LinkedLists<T: Float> {
     nodes: Vec<LinkedListNode<T>>,
     invsize: T,
     minx: T,
@@ -78,7 +77,7 @@ pub struct LinkedLists<T: Float + Display> {
     usehash: bool,
 }
 
-pub trait Vertices<T: Float + Display> {
+pub trait Vertices<T: Float> {
     fn len(&self) -> usize;
 
     fn is_empty(&self) -> bool;
@@ -128,7 +127,7 @@ macro_rules! prevz {
     };
 }
 
-impl<T: Float + Display> LinkedLists<T> {
+impl<T: Float> LinkedLists<T> {
     fn iter(&self, r: ops::Range<LinkedListNodeIndex>) -> NodeIterator<T> {
         NodeIterator::new(self, r.start, r.end)
     }
@@ -235,14 +234,14 @@ impl<T: Float + Display> LinkedLists<T> {
     }
 }
 
-struct NodeIterator<'a, T: Float + Display> {
+struct NodeIterator<'a, T: Float> {
     cur: LinkedListNodeIndex,
     end: LinkedListNodeIndex,
     ll: &'a LinkedLists<T>,
     pending_result: Option<&'a LinkedListNode<T>>,
 }
 
-impl<'a, T: Float + Display> NodeIterator<'a, T> {
+impl<'a, T: Float> NodeIterator<'a, T> {
     fn new(
         ll: &LinkedLists<T>,
         start: LinkedListNodeIndex,
@@ -257,7 +256,7 @@ impl<'a, T: Float + Display> NodeIterator<'a, T> {
     }
 }
 
-impl<'a, T: Float + Display> Iterator for NodeIterator<'a, T> {
+impl<'a, T: Float> Iterator for NodeIterator<'a, T> {
     type Item = &'a LinkedListNode<T>;
     fn next(&mut self) -> Option<Self::Item> {
         self.cur = self.ll.nodes[self.cur].next_linked_list_node_index;
@@ -272,14 +271,14 @@ impl<'a, T: Float + Display> Iterator for NodeIterator<'a, T> {
     }
 }
 
-struct NodePairIterator<'a, T: Float + Display> {
+struct NodePairIterator<'a, T: Float> {
     cur: LinkedListNodeIndex,
     end: LinkedListNodeIndex,
     ll: &'a LinkedLists<T>,
     pending_result: Option<(&'a LinkedListNode<T>, &'a LinkedListNode<T>)>,
 }
 
-impl<'a, T: Float + Display> NodePairIterator<'a, T> {
+impl<'a, T: Float> NodePairIterator<'a, T> {
     fn new(
         ll: &LinkedLists<T>,
         start: LinkedListNodeIndex,
@@ -294,7 +293,7 @@ impl<'a, T: Float + Display> NodePairIterator<'a, T> {
     }
 }
 
-impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
+impl<'a, T: Float> Iterator for NodePairIterator<'a, T> {
     type Item = (&'a LinkedListNode<T>, &'a LinkedListNode<T>);
     fn next(&mut self) -> Option<Self::Item> {
         self.cur = self.ll.nodes[self.cur].next_linked_list_node_index;
@@ -311,7 +310,7 @@ impl<'a, T: Float + Display> Iterator for NodePairIterator<'a, T> {
 
 // link every hole into the outer loop, producing a single-ring polygon
 // without holes
-fn eliminate_holes<T: Float + Display, V: Vertices<T>>(
+fn eliminate_holes<T: Float, V: Vertices<T>>(
     ll: &mut LinkedLists<T>,
     vertices: &V,
     hole_indices: &[VerticesIndex],
@@ -355,7 +354,7 @@ fn eliminate_holes<T: Float + Display, V: Vertices<T>>(
     outer_node
 } // elim holes
 
-impl<const N: usize, T: Float + Display> Vertices<T> for [T; N] {
+impl<const N: usize, T: Float> Vertices<T> for [T; N] {
     fn len(&self) -> usize {
         <[T]>::len(self)
     }
@@ -369,7 +368,7 @@ impl<const N: usize, T: Float + Display> Vertices<T> for [T; N] {
     }
 }
 
-impl<T: Float + Display> Vertices<T> for Vec<T> {
+impl<T: Float> Vertices<T> for Vec<T> {
     fn len(&self) -> usize {
         <Vec<T>>::len(self)
     }
@@ -385,7 +384,7 @@ impl<T: Float + Display> Vertices<T> for Vec<T> {
 
 // minx, miny and invsize are later used to transform coords
 // into integers for z-order calculation
-fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
+fn calc_invsize<T: Float>(minx: T, miny: T, maxx: T, maxy: T) -> T {
     let invsize = T::max(maxx - minx, maxy - miny);
     match invsize.is_zero() {
         true => T::zero(),
@@ -395,7 +394,7 @@ fn calc_invsize<T: Float + Display>(minx: T, miny: T, maxx: T, maxy: T) -> T {
 
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
-fn earcut_linked_hashed<T: Float + Display>(
+fn earcut_linked_hashed<T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangle_indices: &mut FinalTriangleIndices,
@@ -446,7 +445,7 @@ fn earcut_linked_hashed<T: Float + Display>(
 
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
-fn earcut_linked_unhashed<T: Float + Display>(
+fn earcut_linked_unhashed<T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
@@ -492,7 +491,7 @@ fn earcut_linked_unhashed<T: Float + Display>(
 
 // Simon Tatham's linked list merge sort algorithm
 // http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
-fn sort_linked<T: Float + Display>(ll: &mut LinkedLists<T>, mut list: LinkedListNodeIndex) {
+fn sort_linked<T: Float>(ll: &mut LinkedLists<T>, mut list: LinkedListNodeIndex) {
     let mut p;
     let mut q;
     let mut e;
@@ -558,28 +557,28 @@ struct NodeIndexTriangle(
 );
 
 impl NodeIndexTriangle {
-    fn prev_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
+    fn prev_node<T: Float>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.0]
     }
 
-    fn ear_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
+    fn ear_node<T: Float>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.1]
     }
 
-    fn next_node<T: Float + Display>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
+    fn next_node<T: Float>(self, ll: &LinkedLists<T>) -> LinkedListNode<T> {
         ll.nodes[self.2]
     }
 
-    fn node_triangle<T: Float + Display>(self, ll: &LinkedLists<T>) -> NodeTriangle<T> {
+    fn node_triangle<T: Float>(self, ll: &LinkedLists<T>) -> NodeTriangle<T> {
         NodeTriangle(self.prev_node(ll), self.ear_node(ll), self.next_node(ll))
     }
 
-    fn area<T: Float + Display>(self, ll: &LinkedLists<T>) -> T {
+    fn area<T: Float>(self, ll: &LinkedLists<T>) -> T {
         self.node_triangle(ll).area()
     }
 
     // check whether a polygon node forms a valid ear with adjacent nodes
-    fn is_ear<T: Float + Display>(self, ll: &LinkedLists<T>) -> bool {
+    fn is_ear<T: Float>(self, ll: &LinkedLists<T>) -> bool {
         let zero = T::zero();
         match self.area(ll) >= zero {
             true => false, // reflex, cant be ear
@@ -595,9 +594,9 @@ impl NodeIndexTriangle {
 }
 
 #[derive(Clone, Copy)]
-struct NodeTriangle<T: Float + Display>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>);
+struct NodeTriangle<T: Float>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>);
 
-impl<T: Float + Display> NodeTriangle<T> {
+impl<T: Float> NodeTriangle<T> {
     fn from_ear_node(ear_node: LinkedListNode<T>, ll: &mut LinkedLists<T>) -> Self {
         NodeTriangle(
             ll.nodes[ear_node.prev_linked_list_node_index],
@@ -727,7 +726,7 @@ impl<T: Float + Display> NodeTriangle<T> {
 
 // helper for is_ear_hashed. needs manual inline (rust 2018)
 #[inline(always)]
-fn earcheck<T: Float + Display>(
+fn earcheck<T: Float>(
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
     c: &LinkedListNode<T>,
@@ -743,7 +742,7 @@ fn earcheck<T: Float + Display>(
         && NodeTriangle(*prev, *p, *next).area() >= zero
 }
 
-fn filter_points<T: Float + Display>(
+fn filter_points<T: Float>(
     ll: &mut LinkedLists<T>,
     start: LinkedListNodeIndex,
     end: Option<LinkedListNodeIndex>,
@@ -792,7 +791,7 @@ fn filter_points<T: Float + Display>(
 
 // create a circular doubly linked list from polygon points in the
 // specified winding order
-fn linked_list<T: Float + Display, V: Vertices<T>>(
+fn linked_list<T: Float, V: Vertices<T>>(
     vertices: &V,
     start: usize,
     end: usize,
@@ -807,7 +806,7 @@ fn linked_list<T: Float + Display, V: Vertices<T>>(
 }
 
 // add new nodes to an existing linked list.
-fn linked_list_add_contour<T: Float + Display, V: Vertices<T>>(
+fn linked_list_add_contour<T: Float, V: Vertices<T>>(
     ll: &mut LinkedLists<T>,
     vertices: &V,
     start: VerticesIndex,
@@ -878,7 +877,7 @@ fn linked_list_add_contour<T: Float + Display, V: Vertices<T>>(
 // z-order of a point given coords and inverse of the longer side of
 // data bbox
 #[inline(always)]
-fn zorder<T: Float + Display>(coord: Coord<T>, invsize: T) -> i32 {
+fn zorder<T: Float>(coord: Coord<T>, invsize: T) -> i32 {
     // coords are transformed into non-negative 15-bit integer range
     // stored in two 32bit ints, which are combined into a single 64 bit int.
     let x: i64 = num_traits::cast::<T, i64>(coord.x * invsize).unwrap();
@@ -907,7 +906,7 @@ impl FinalTriangleIndices {
     }
 }
 
-pub fn earcut<T: Float + Display, V: Vertices<T>>(
+pub fn earcut<T: Float, V: Vertices<T>>(
     vertices: &V,
     hole_indices: &[VerticesIndex],
     dims: usize,
@@ -959,7 +958,7 @@ this will remove one of those nodes so there is no more overlap.
 but theres another important aspect of this function. it will dump triangles
 into the 'triangles' variable, thus this is part of the triangulation
 algorithm itself.*/
-fn cure_local_intersections<T: Float + Display>(
+fn cure_local_intersections<T: Float>(
     ll: &mut LinkedLists<T>,
     instart: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
@@ -1021,7 +1020,7 @@ fn cure_local_intersections<T: Float + Display>(
 }
 
 // try splitting polygon into two and triangulate them independently
-fn split_earcut<T: Float + Display>(
+fn split_earcut<T: Float>(
     ll: &mut LinkedLists<T>,
     start_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
@@ -1058,7 +1057,7 @@ fn split_earcut<T: Float + Display>(
 }
 
 // David Eberly's algorithm for finding a bridge between hole and outer polygon
-fn find_hole_bridge<T: Float + Display>(
+fn find_hole_bridge<T: Float>(
     ll: &LinkedLists<T>,
     hole: LinkedListNodeIndex,
     outer_node: LinkedListNodeIndex,
@@ -1137,7 +1136,7 @@ fn find_hole_bridge<T: Float + Display>(
 
 // check if a diagonal between two polygon nodes is valid (lies in
 // polygon interior)
-fn is_valid_diagonal<T: Float + Display>(
+fn is_valid_diagonal<T: Float>(
     ll: &LinkedLists<T>,
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
@@ -1180,7 +1179,7 @@ detection for endpoint detection.
     p2 q1
 */
 
-fn pseudo_intersects<T: Float + Display>(
+fn pseudo_intersects<T: Float>(
     p1: LinkedListNode<T>,
     q1: LinkedListNode<T>,
     p2: LinkedListNode<T>,
@@ -1196,7 +1195,7 @@ fn pseudo_intersects<T: Float + Display>(
 }
 
 // check if a polygon diagonal intersects any polygon segments
-fn intersects_polygon<T: Float + Display>(
+fn intersects_polygon<T: Float>(
     ll: &LinkedLists<T>,
     a: LinkedListNode<T>,
     b: LinkedListNode<T>,
@@ -1211,7 +1210,7 @@ fn intersects_polygon<T: Float + Display>(
 }
 
 // check if a polygon diagonal is locally inside the polygon
-fn locally_inside<T: Float + Display>(
+fn locally_inside<T: Float>(
     ll: &LinkedLists<T>,
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
@@ -1231,7 +1230,7 @@ fn locally_inside<T: Float + Display>(
 }
 
 // check if the middle point of a polygon diagonal is inside the polygon
-fn middle_inside<T: Float + Display>(
+fn middle_inside<T: Float>(
     ll: &LinkedLists<T>,
     a: &LinkedListNode<T>,
     b: &LinkedListNode<T>,
@@ -1321,7 +1320,7 @@ Return value.
 
 Return value is the new node, at point 7.
 */
-fn split_bridge_polygon<T: Float + Display>(
+fn split_bridge_polygon<T: Float>(
     ll: &mut LinkedLists<T>,
     a: LinkedListNodeIndex,
     b: LinkedListNodeIndex,
