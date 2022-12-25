@@ -211,7 +211,7 @@ impl<T: Float> LinkedLists<T> {
         let pzi = self.nodes[start].prevz_idx;
         self.nodes[pzi].nextz_idx = NULL;
         self.nodes[start].prevz_idx = NULL;
-        sort_linked(self, start);
+        self.sort_linked(start);
     }
 
     // find a bridge between vertices that connects hole with an outer ring
@@ -225,6 +225,66 @@ impl<T: Float> LinkedLists<T> {
         let b = split_bridge_polygon(self, test_idx, hole_idx);
         let ni = self.nodes[b].next_linked_list_node_index;
         filter_points(self, b, Some(ni));
+    }
+
+    // Simon Tatham's linked list merge sort algorithm
+    // http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
+    fn sort_linked(&mut self, mut list: LinkedListNodeIndex) {
+        let mut p;
+        let mut q;
+        let mut e;
+        let mut nummerges;
+        let mut psize;
+        let mut qsize;
+        let mut insize = 1;
+        let mut tail;
+
+        loop {
+            p = list;
+            list = NULL;
+            tail = NULL;
+            nummerges = 0;
+
+            while p != NULL {
+                nummerges += 1;
+                q = p;
+                psize = 0;
+                while q != NULL && psize < insize {
+                    psize += 1;
+                    q = self.nodes[q].nextz_idx;
+                }
+                qsize = insize;
+
+                while psize > 0 || (qsize > 0 && q != NULL) {
+                    if psize > 0 && (qsize == 0 || q == NULL || self.nodes[p].z <= self.nodes[q].z) {
+                        e = p;
+                        p = self.nodes[p].nextz_idx;
+                        psize -= 1;
+                    } else {
+                        e = q;
+                        q = self.nodes[q].nextz_idx;
+                        qsize -= 1;
+                    }
+
+                    if tail != NULL {
+                        self.nodes[tail].nextz_idx = e;
+                    } else {
+                        list = e;
+                    }
+
+                    self.nodes[e].prevz_idx = tail;
+                    tail = e;
+                }
+
+                p = q;
+            }
+
+            self.nodes[tail].nextz_idx = NULL;
+            insize *= 2;
+            if nummerges <= 1 {
+                break;
+            }
+        }
     }
 }
 
@@ -478,66 +538,6 @@ fn earcut_linked_unhashed<const PASS: usize, T: Float>(
         earcut_linked_unhashed::<2, T>(ll, ear_idx, triangles);
     } else if PASS == 2 {
         split_earcut(ll, next_idx, triangles);
-    }
-}
-
-// Simon Tatham's linked list merge sort algorithm
-// http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
-fn sort_linked<T: Float>(ll: &mut LinkedLists<T>, mut list: LinkedListNodeIndex) {
-    let mut p;
-    let mut q;
-    let mut e;
-    let mut nummerges;
-    let mut psize;
-    let mut qsize;
-    let mut insize = 1;
-    let mut tail;
-
-    loop {
-        p = list;
-        list = NULL;
-        tail = NULL;
-        nummerges = 0;
-
-        while p != NULL {
-            nummerges += 1;
-            q = p;
-            psize = 0;
-            while q != NULL && psize < insize {
-                psize += 1;
-                q = ll.nodes[q].nextz_idx;
-            }
-            qsize = insize;
-
-            while psize > 0 || (qsize > 0 && q != NULL) {
-                if psize > 0 && (qsize == 0 || q == NULL || ll.nodes[p].z <= ll.nodes[q].z) {
-                    e = p;
-                    p = ll.nodes[p].nextz_idx;
-                    psize -= 1;
-                } else {
-                    e = q;
-                    q = ll.nodes[q].nextz_idx;
-                    qsize -= 1;
-                }
-
-                if tail != NULL {
-                    ll.nodes[tail].nextz_idx = e;
-                } else {
-                    list = e;
-                }
-
-                ll.nodes[e].prevz_idx = tail;
-                tail = e;
-            }
-
-            p = q;
-        }
-
-        ll.nodes[tail].nextz_idx = NULL;
-        insize *= 2;
-        if nummerges <= 1 {
-            break;
-        }
     }
 }
 
