@@ -638,8 +638,8 @@ impl<T: Float> NodeTriangle<T> {
 
         let bbox_maxx = prev.coord.x.max(ear.coord.x.max(next.coord.x));
         let bbox_maxy = prev.coord.y.max(ear.coord.y.max(next.coord.y));
-        let bbox_minx = prev.coord.x.max(ear.coord.x.max(next.coord.x));
-        let bbox_miny = prev.coord.y.max(ear.coord.y.max(next.coord.y));
+        let bbox_minx = prev.coord.x.min(ear.coord.x.min(next.coord.x));
+        let bbox_miny = prev.coord.y.min(ear.coord.y.min(next.coord.y));
         // z-order range for the current triangle bbox;
         let min_z = zorder(
             Coord {
