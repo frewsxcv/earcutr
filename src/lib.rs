@@ -390,14 +390,13 @@ fn calc_invsize<T: Float>(minx: T, miny: T, maxx: T, maxy: T) -> T {
 
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
-fn earcut_linked_hashed<T: Float>(
+fn earcut_linked_hashed<const PASS: usize, T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangle_indices: &mut FinalTriangleIndices,
-    pass: usize,
 ) {
     // interlink polygon nodes in z-order
-    if pass == 0 {
+    if PASS == 0 {
         ll.index_curve(ear_idx);
     }
     // iterate through ears, slicing them one by one
@@ -428,24 +427,23 @@ fn earcut_linked_hashed<T: Float>(
     };
     // if we looped through the whole remaining polygon and can't
     // find any more ears
-    if pass == 0 {
+    if PASS == 0 {
         let tmp = filter_points(ll, next_idx, None);
-        earcut_linked_hashed(ll, tmp, triangle_indices, 1);
-    } else if pass == 1 {
+        earcut_linked_hashed::<1, T>(ll, tmp, triangle_indices);
+    } else if PASS == 1 {
         ear_idx = cure_local_intersections(ll, next_idx, triangle_indices);
-        earcut_linked_hashed(ll, ear_idx, triangle_indices, 2);
-    } else if pass == 2 {
+        earcut_linked_hashed::<2, T>(ll, ear_idx, triangle_indices);
+    } else if PASS == 2 {
         split_earcut(ll, next_idx, triangle_indices);
     }
 }
 
 // main ear slicing loop which triangulates a polygon (given as a linked
 // list)
-fn earcut_linked_unhashed<T: Float>(
+fn earcut_linked_unhashed<const PASS: usize, T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
-    pass: usize,
 ) {
     // iterate through ears, slicing them one by one
     let mut stop_idx = ear_idx;
@@ -474,13 +472,13 @@ fn earcut_linked_unhashed<T: Float>(
     };
     // if we looped through the whole remaining polygon and can't
     // find any more ears
-    if pass == 0 {
+    if PASS == 0 {
         let tmp = filter_points(ll, next_idx, None);
-        earcut_linked_unhashed(ll, tmp, triangles, 1);
-    } else if pass == 1 {
+        earcut_linked_unhashed::<1, T>(ll, tmp, triangles);
+    } else if PASS == 1 {
         ear_idx = cure_local_intersections(ll, next_idx, triangles);
-        earcut_linked_unhashed(ll, ear_idx, triangles, 2);
-    } else if pass == 2 {
+        earcut_linked_unhashed::<2, T>(ll, ear_idx, triangles);
+    } else if PASS == 2 {
         split_earcut(ll, next_idx, triangles);
     }
 }
@@ -937,9 +935,9 @@ pub fn earcut<T: Float, V: Vertices<T>>(
             n.coord.x = n.coord.x - mx;
             n.coord.y = n.coord.y - my;
         });
-        earcut_linked_hashed(&mut ll, outer_node, &mut triangles, 0);
+        earcut_linked_hashed::<0, T>(&mut ll, outer_node, &mut triangles);
     } else {
-        earcut_linked_unhashed(&mut ll, outer_node, &mut triangles, 0);
+        earcut_linked_unhashed::<0, T>(&mut ll, outer_node, &mut triangles);
     }
 
     triangles.0
@@ -1039,8 +1037,8 @@ fn split_earcut<T: Float>(
                 c = filter_points(ll, c, Some(cn));
 
                 // run earcut on each half
-                earcut_linked_hashed(ll, a, triangles, 0);
-                earcut_linked_hashed(ll, c, triangles, 0);
+                earcut_linked_hashed::<0, T>(ll, a, triangles);
+                earcut_linked_hashed::<0, T>(ll, c, triangles);
                 return;
             }
             b = ll.nodes[b].next_linked_list_node_index;

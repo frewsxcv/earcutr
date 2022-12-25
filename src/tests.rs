@@ -337,20 +337,20 @@ fn test_filter_points() {
 fn test_earcut_linked() {
     let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-    let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
-    earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
+    let mut tris = FinalTriangleIndices::default();
+    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris);
     assert!(tris.0.len() == 6);
 
     let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-    let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
-    earcut_linked_unhashed(&mut ll, 1, &mut tris, pass);
+    let mut tris = FinalTriangleIndices::default();
+    earcut_linked_unhashed::<0, f32>(&mut ll, 1, &mut tris);
     assert!(tris.0.len() == 9);
 
     let m = vec![0.0, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&m, 0, m.len(), true);
-    let (mut tris, pass) = (FinalTriangleIndices::default(), 0);
-    earcut_linked_hashed(&mut ll, 1, &mut tris, pass);
+    let mut tris = FinalTriangleIndices::default();
+    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris);
     assert!(tris.0.len() == 9);
 }
 
