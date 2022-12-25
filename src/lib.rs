@@ -25,6 +25,27 @@ struct Coord<T: Float> {
     y: T,
 }
 
+impl<T: Float> Coord<T> {
+    // z-order of a point given coords and inverse of the longer side of
+    // data bbox
+    #[inline(always)]
+    fn zorder(&self, invsize: T) -> i32 {
+        // coords are transformed into non-negative 15-bit integer range
+        // stored in two 32bit ints, which are combined into a single 64 bit int.
+        let x: i64 = num_traits::cast::<T, i64>(self.x * invsize).unwrap();
+        let y: i64 = num_traits::cast::<T, i64>(self.y * invsize).unwrap();
+        let mut xy: i64 = x << 32 | y;
+
+        // todo ... big endian?
+        xy = (xy | (xy << 8)) & 0x00FF00FF00FF00FF;
+        xy = (xy | (xy << 4)) & 0x0F0F0F0F0F0F0F0F;
+        xy = (xy | (xy << 2)) & 0x3333333333333333;
+        xy = (xy | (xy << 1)) & 0x5555555555555555;
+
+        ((xy >> 32) | (xy << 1)) as i32
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 struct LinkedListNode<T: Float> {
     /// vertex index in flat one-d array of 64bit float coords
@@ -170,8 +191,14 @@ impl<T: Float> LinkedLists<T> {
         let mut ll = LinkedLists {
             nodes: Vec::with_capacity(size_hint),
             invsize: T::zero(),
-            min: Coord { x: T::max_value(), y: T::max_value() },
-            max: Coord { x: T::min_value(), y: T::min_value() },
+            min: Coord {
+                x: T::max_value(),
+                y: T::max_value(),
+            },
+            max: Coord {
+                x: T::min_value(),
+                y: T::min_value(),
+            },
             usehash: true,
         };
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
@@ -198,7 +225,7 @@ impl<T: Float> LinkedLists<T> {
         let mut p = start;
         loop {
             if self.nodes[p].z == 0 {
-                self.nodes[p].z = zorder(self.nodes[p].coord, invsize);
+                self.nodes[p].z = self.nodes[p].coord.zorder(invsize);
             }
             self.nodes[p].prevz_idx = self.nodes[p].prev_linked_list_node_index;
             self.nodes[p].nextz_idx = self.nodes[p].next_linked_list_node_index;
@@ -256,7 +283,8 @@ impl<T: Float> LinkedLists<T> {
                 qsize = insize;
 
                 while psize > 0 || (qsize > 0 && q != NULL) {
-                    if psize > 0 && (qsize == 0 || q == NULL || self.nodes[p].z <= self.nodes[q].z) {
+                    if psize > 0 && (qsize == 0 || q == NULL || self.nodes[p].z <= self.nodes[q].z)
+                    {
                         e = p;
                         p = self.nodes[p].nextz_idx;
                         psize -= 1;
@@ -354,6 +382,21 @@ impl<T: Float> LinkedLists<T> {
             lastidx = Some(self.nodes[lastidx.unwrap()].next_linked_list_node_index);
         }
         (lastidx.unwrap(), leftmost_idx.unwrap())
+    }
+
+    // check if a diagonal between two polygon nodes is valid (lies in
+    // polygon interior)
+    fn is_valid_diagonal(
+        &self,
+        a: &LinkedListNode<T>,
+        b: &LinkedListNode<T>,
+    ) -> bool {
+        next!(self, a.idx).vertices_index != b.vertices_index
+            && prev!(self, a.idx).vertices_index != b.vertices_index
+            && !intersects_polygon(self, *a, *b)
+            && locally_inside(self, a, b)
+            && locally_inside(self, b, a)
+            && middle_inside(self, a, b)
     }
 }
 
@@ -707,20 +750,16 @@ impl<T: Float> NodeTriangle<T> {
         let bbox_minx = prev.coord.x.min(ear.coord.x.min(next.coord.x));
         let bbox_miny = prev.coord.y.min(ear.coord.y.min(next.coord.y));
         // z-order range for the current triangle bbox;
-        let min_z = zorder(
-            Coord {
-                x: bbox_minx,
-                y: bbox_miny,
-            },
-            ll.invsize,
-        );
-        let max_z = zorder(
-            Coord {
-                x: bbox_maxx,
-                y: bbox_maxy,
-            },
-            ll.invsize,
-        );
+        let min_z = Coord {
+            x: bbox_minx,
+            y: bbox_miny,
+        }
+        .zorder(ll.invsize);
+        let max_z = Coord {
+            x: bbox_maxx,
+            y: bbox_maxy,
+        }
+        .zorder(ll.invsize);
 
         let mut p = ear.prevz_idx;
         let mut n = ear.nextz_idx;
@@ -861,25 +900,6 @@ fn linked_list<T: Float, V: Vertices<T>>(
     (ll, last_idx)
 }
 
-// z-order of a point given coords and inverse of the longer side of
-// data bbox
-#[inline(always)]
-fn zorder<T: Float>(coord: Coord<T>, invsize: T) -> i32 {
-    // coords are transformed into non-negative 15-bit integer range
-    // stored in two 32bit ints, which are combined into a single 64 bit int.
-    let x: i64 = num_traits::cast::<T, i64>(coord.x * invsize).unwrap();
-    let y: i64 = num_traits::cast::<T, i64>(coord.y * invsize).unwrap();
-    let mut xy: i64 = x << 32 | y;
-
-    // todo ... big endian?
-    xy = (xy | (xy << 8)) & 0x00FF00FF00FF00FF;
-    xy = (xy | (xy << 4)) & 0x0F0F0F0F0F0F0F0F;
-    xy = (xy | (xy << 2)) & 0x3333333333333333;
-    xy = (xy | (xy << 1)) & 0x5555555555555555;
-
-    ((xy >> 32) | (xy << 1)) as i32
-}
-
 struct VerticesIndexTriangle(usize, usize, usize);
 
 #[derive(Default, Debug)]
@@ -1018,7 +1038,7 @@ fn split_earcut<T: Float>(
         let mut b = next!(ll, a).next_linked_list_node_index;
         while b != ll.nodes[a].prev_linked_list_node_index {
             if ll.nodes[a].vertices_index != ll.nodes[b].vertices_index
-                && is_valid_diagonal(ll, &ll.nodes[a], &ll.nodes[b])
+                && ll.is_valid_diagonal(&ll.nodes[a], &ll.nodes[b])
             {
                 // split the polygon in two by the diagonal
                 let mut c = split_bridge_polygon(ll, a, b);
@@ -1119,21 +1139,6 @@ fn find_hole_bridge<T: Float>(
             }
         })
         .0
-}
-
-// check if a diagonal between two polygon nodes is valid (lies in
-// polygon interior)
-fn is_valid_diagonal<T: Float>(
-    ll: &LinkedLists<T>,
-    a: &LinkedListNode<T>,
-    b: &LinkedListNode<T>,
-) -> bool {
-    next!(ll, a.idx).vertices_index != b.vertices_index
-        && prev!(ll, a.idx).vertices_index != b.vertices_index
-        && !intersects_polygon(ll, *a, *b)
-        && locally_inside(ll, a, b)
-        && locally_inside(ll, b, a)
-        && middle_inside(ll, a, b)
 }
 
 /* check if two segments cross over each other. note this is different

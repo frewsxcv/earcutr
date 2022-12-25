@@ -451,14 +451,14 @@ fn test_intersects_itself() {
 fn test_is_valid_diagonal() {
     let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.9, 0.1];
     let (ll, _) = linked_list(&m, 0, m.len(), true);
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[1], &ll.nodes[2]));
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[2], &ll.nodes[3]));
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[3], &ll.nodes[4]));
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[4], &ll.nodes[1]));
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[1], &ll.nodes[3]));
-    assert!(is_valid_diagonal(&ll, &ll.nodes[2], &ll.nodes[4]));
-    assert!(!is_valid_diagonal(&ll, &ll.nodes[3], &ll.nodes[4]));
-    assert!(is_valid_diagonal(&ll, &ll.nodes[4], &ll.nodes[2]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[1], &ll.nodes[2]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[2], &ll.nodes[3]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[3], &ll.nodes[4]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[4], &ll.nodes[1]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[1], &ll.nodes[3]));
+    assert!(ll.is_valid_diagonal(&ll.nodes[2], &ll.nodes[4]));
+    assert!(!ll.is_valid_diagonal(&ll.nodes[3], &ll.nodes[4]));
+    assert!(ll.is_valid_diagonal(&ll.nodes[4], &ll.nodes[2]));
 }
 
 #[test]
