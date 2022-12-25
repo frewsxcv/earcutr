@@ -381,7 +381,7 @@ impl<T: Float> Vertices<T> for Vec<T> {
 // minx, miny and invsize are later used to transform coords
 // into integers for z-order calculation
 fn calc_invsize<T: Float>(minx: T, miny: T, maxx: T, maxy: T) -> T {
-    let invsize = T::max(maxx - minx, maxy - miny);
+    let invsize = (maxx - minx).max(maxy - miny);
     match invsize.is_zero() {
         true => T::zero(),
         false => num_traits::cast::<f64, T>(32767.0).unwrap() / invsize,
@@ -636,10 +636,10 @@ impl<T: Float> NodeTriangle<T> {
         };
         let NodeTriangle(prev, ear, next) = self;
 
-        let bbox_maxx = T::max(prev.coord.x, T::max(ear.coord.x, next.coord.x));
-        let bbox_maxy = T::max(prev.coord.y, T::max(ear.coord.y, next.coord.y));
-        let bbox_minx = T::min(prev.coord.x, T::min(ear.coord.x, next.coord.x));
-        let bbox_miny = T::min(prev.coord.y, T::min(ear.coord.y, next.coord.y));
+        let bbox_maxx = prev.coord.x.max(ear.coord.x.max(next.coord.x));
+        let bbox_maxy = prev.coord.y.max(ear.coord.y.max(next.coord.y));
+        let bbox_minx = prev.coord.x.max(ear.coord.x.max(next.coord.x));
+        let bbox_miny = prev.coord.y.max(ear.coord.y.max(next.coord.y));
         // z-order range for the current triangle bbox;
         let min_z = zorder(
             Coord {
@@ -832,9 +832,9 @@ fn linked_list_add_contour<T: Float, V: Vertices<T>>(
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.min.y = T::min(vertices.vertex(i + 1), ll.min.y);
-                ll.max.x = T::max(vertices.vertex(i), ll.max.x);
-                ll.max.y = T::max(vertices.vertex(i + 1), ll.max.y);
+                ll.min.y = vertices.vertex(i + 1).min(ll.min.y);
+                ll.max.x = vertices.vertex(i).max(ll.max.x);
+                ll.max.y = vertices.vertex(i + 1).max(ll.max.y);
             }
         }
     } else {
@@ -852,14 +852,14 @@ fn linked_list_add_contour<T: Float, V: Vertices<T>>(
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.min.y = T::min(vertices.vertex(i + 1), ll.min.y);
-                ll.max.x = T::max(vertices.vertex(i), ll.max.x);
-                ll.max.y = T::max(vertices.vertex(i + 1), ll.max.y);
+                ll.min.y = vertices.vertex(i + 1).min(ll.min.y);
+                ll.max.x = vertices.vertex(i).max(ll.max.x);
+                ll.max.y = vertices.vertex(i + 1).max(ll.max.y);
             }
         }
     }
 
-    ll.min.x = T::min(contour_minx, ll.min.x);
+    ll.min.x = contour_minx.min(ll.min.x);
 
     if ll.nodes[lastidx.unwrap()].xy_eq(*nextref!(ll, lastidx.unwrap())) {
         ll.remove_node(lastidx.unwrap());
