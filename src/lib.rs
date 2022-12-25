@@ -1,4 +1,3 @@
-use num_traits::float::Float;
 use std::{cmp, ops};
 
 static DIM: usize = 2;
@@ -17,6 +16,10 @@ pub use legacy::flatten;
 
 type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
+
+pub trait Float: num_traits::float::Float {}
+
+impl<T> Float for T where T: num_traits::float::Float {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Coord<T: Float> {
@@ -388,8 +391,8 @@ impl<T: Float> Vertices<T> for Vec<T> {
 
 // minx, miny and invsize are later used to transform coords
 // into integers for z-order calculation
-fn calc_invsize<T: Float>(minx: T, miny: T, maxx: T, maxy: T) -> T {
-    let invsize = (maxx - minx).max(maxy - miny);
+fn calc_invsize<T: Float>(min: Coord<T>, max: Coord<T>) -> T {
+    let invsize = (max.x - min.x).max(max.y - min.y);
     match invsize.is_zero() {
         true => T::zero(),
         false => num_traits::cast::<f64, T>(32767.0).unwrap() / invsize,
@@ -931,7 +934,7 @@ pub fn earcut<T: Float, V: Vertices<T>>(
     let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node);
 
     if ll.usehash {
-        ll.invsize = calc_invsize(ll.min.x, ll.min.y, ll.max.x, ll.max.y);
+        ll.invsize = calc_invsize(ll.min, ll.max);
 
         // translate all points so min is 0,0. prevents subtraction inside
         // zorder. also note invsize does not depend on translation in space
