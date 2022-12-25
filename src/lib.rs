@@ -19,14 +19,18 @@ pub use legacy::flatten;
 type LinkedListNodeIndex = usize;
 type VerticesIndex = usize;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Coord<T: Float + Display> {
+    x: T,
+    y: T,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct LinkedListNode<T: Float + Display> {
     /// vertex index in flat one-d array of 64bit float coords
     vertices_index: VerticesIndex,
-    /// vertex x coordinate
-    x: T,
-    /// vertex y coordinate
-    y: T,
+    /// vertex
+    coord: Coord<T>,
     /// previous vertex node in a polygon ring
     prev_linked_list_node_index: LinkedListNodeIndex,
     /// next vertex node in a polygon ring
@@ -44,11 +48,10 @@ struct LinkedListNode<T: Float + Display> {
 }
 
 impl<T: Float + Display> LinkedListNode<T> {
-    fn new(i: VerticesIndex, x: T, y: T, idx: LinkedListNodeIndex) -> LinkedListNode<T> {
+    fn new(i: VerticesIndex, coord: Coord<T>, idx: LinkedListNodeIndex) -> LinkedListNode<T> {
         LinkedListNode {
             vertices_index: i,
-            x,
-            y,
+            coord,
             prev_linked_list_node_index: NULL,
             next_linked_list_node_index: NULL,
             z: 0,
@@ -61,7 +64,7 @@ impl<T: Float + Display> LinkedListNode<T> {
 
     // check if two points are equal
     fn xy_eq(&self, other: LinkedListNode<T>) -> bool {
-        self.x == other.x && self.y == other.y
+        self.coord == other.coord
     }
 }
 
@@ -137,11 +140,10 @@ impl<T: Float + Display> LinkedLists<T> {
     fn insert_node(
         &mut self,
         i: VerticesIndex,
-        x: T,
-        y: T,
+        coord: Coord<T>,
         last: Option<LinkedListNodeIndex>,
     ) -> LinkedListNodeIndex {
-        let mut p = LinkedListNode::new(i, x, y, self.nodes.len());
+        let mut p = LinkedListNode::new(i, coord, self.nodes.len());
         match last {
             None => {
                 p.next_linked_list_node_index = p.idx;
@@ -182,8 +184,10 @@ impl<T: Float + Display> LinkedLists<T> {
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
         ll.nodes.push(LinkedListNode {
             vertices_index: 0,
-            x: T::zero(),
-            y: T::zero(),
+            coord: Coord {
+                x: T::zero(),
+                y: T::zero(),
+            },
             prev_linked_list_node_index: 0,
             next_linked_list_node_index: 0,
             z: 0,
@@ -201,7 +205,7 @@ impl<T: Float + Display> LinkedLists<T> {
         let mut p = start;
         loop {
             if self.nodes[p].z == 0 {
-                self.nodes[p].z = zorder(self.nodes[p].x, self.nodes[p].y, invsize);
+                self.nodes[p].z = zorder(self.nodes[p].coord, invsize);
             }
             self.nodes[p].prevz_idx = self.nodes[p].prev_linked_list_node_index;
             self.nodes[p].nextz_idx = self.nodes[p].next_linked_list_node_index;
@@ -335,7 +339,12 @@ fn eliminate_holes<T: Float + Display, V: Vertices<T>>(
         queue.push(ll.nodes[leftmost_idx]);
     }
 
-    queue.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(cmp::Ordering::Equal));
+    queue.sort_by(|a, b| {
+        a.coord
+            .x
+            .partial_cmp(&b.coord.x)
+            .unwrap_or(cmp::Ordering::Equal)
+    });
 
     // process holes from left to right
     for node in queue {
@@ -602,7 +611,8 @@ impl<T: Float + Display> NodeTriangle<T> {
         let q = self.1;
         let r = self.2;
         // signed area of a parallelogram
-        (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
+        (q.coord.y - p.coord.y) * (r.coord.x - q.coord.x)
+            - (q.coord.x - p.coord.x) * (r.coord.y - q.coord.y)
     }
 
     // check if a point lies within a convex triangle
@@ -613,9 +623,15 @@ impl<T: Float + Display> NodeTriangle<T> {
         let b = self.1;
         let c = self.2;
 
-        ((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= zero)
-            && ((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= zero)
-            && ((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= zero)
+        ((c.coord.x - p.coord.x) * (a.coord.y - p.coord.y)
+            - (a.coord.x - p.coord.x) * (c.coord.y - p.coord.y)
+            >= zero)
+            && ((a.coord.x - p.coord.x) * (b.coord.y - p.coord.y)
+                - (b.coord.x - p.coord.x) * (a.coord.y - p.coord.y)
+                >= zero)
+            && ((b.coord.x - p.coord.x) * (c.coord.y - p.coord.y)
+                - (c.coord.x - p.coord.x) * (b.coord.y - p.coord.y)
+                >= zero)
     }
 
     #[inline(always)]
@@ -627,13 +643,25 @@ impl<T: Float + Display> NodeTriangle<T> {
         };
         let NodeTriangle(prev, ear, next) = self;
 
-        let bbox_maxx = T::max(prev.x, T::max(ear.x, next.x));
-        let bbox_maxy = T::max(prev.y, T::max(ear.y, next.y));
-        let bbox_minx = T::min(prev.x, T::min(ear.x, next.x));
-        let bbox_miny = T::min(prev.y, T::min(ear.y, next.y));
+        let bbox_maxx = T::max(prev.coord.x, T::max(ear.coord.x, next.coord.x));
+        let bbox_maxy = T::max(prev.coord.y, T::max(ear.coord.y, next.coord.y));
+        let bbox_minx = T::min(prev.coord.x, T::min(ear.coord.x, next.coord.x));
+        let bbox_miny = T::min(prev.coord.y, T::min(ear.coord.y, next.coord.y));
         // z-order range for the current triangle bbox;
-        let min_z = zorder(bbox_minx, bbox_miny, ll.invsize);
-        let max_z = zorder(bbox_maxx, bbox_maxy, ll.invsize);
+        let min_z = zorder(
+            Coord {
+                x: bbox_minx,
+                y: bbox_miny,
+            },
+            ll.invsize,
+        );
+        let max_z = zorder(
+            Coord {
+                x: bbox_maxx,
+                y: bbox_maxy,
+            },
+            ll.invsize,
+        );
 
         let mut p = ear.prevz_idx;
         let mut n = ear.nextz_idx;
@@ -798,8 +826,14 @@ fn linked_list_add_contour<T: Float + Display, V: Vertices<T>>(
 
     if clockwise == (vertices.signed_area(start, end) > T::zero()) {
         for i in (start..end).step_by(DIM) {
-            lastidx =
-                Some(ll.insert_node(i / DIM, vertices.vertex(i), vertices.vertex(i + 1), lastidx));
+            lastidx = Some(ll.insert_node(
+                i / DIM,
+                Coord {
+                    x: vertices.vertex(i),
+                    y: vertices.vertex(i + 1),
+                },
+                lastidx,
+            ));
             if contour_minx > vertices.vertex(i) {
                 contour_minx = vertices.vertex(i);
                 leftmost_idx = lastidx
@@ -812,8 +846,14 @@ fn linked_list_add_contour<T: Float + Display, V: Vertices<T>>(
         }
     } else {
         for i in (start..=(end - DIM)).rev().step_by(DIM) {
-            lastidx =
-                Some(ll.insert_node(i / DIM, vertices.vertex(i), vertices.vertex(i + 1), lastidx));
+            lastidx = Some(ll.insert_node(
+                i / DIM,
+                Coord {
+                    x: vertices.vertex(i),
+                    y: vertices.vertex(i + 1),
+                },
+                lastidx,
+            ));
             if contour_minx > vertices.vertex(i) {
                 contour_minx = vertices.vertex(i);
                 leftmost_idx = lastidx
@@ -838,11 +878,11 @@ fn linked_list_add_contour<T: Float + Display, V: Vertices<T>>(
 // z-order of a point given coords and inverse of the longer side of
 // data bbox
 #[inline(always)]
-fn zorder<T: Float + Display>(xf: T, yf: T, invsize: T) -> i32 {
+fn zorder<T: Float + Display>(coord: Coord<T>, invsize: T) -> i32 {
     // coords are transformed into non-negative 15-bit integer range
     // stored in two 32bit ints, which are combined into a single 64 bit int.
-    let x: i64 = num_traits::cast::<T, i64>(xf * invsize).unwrap();
-    let y: i64 = num_traits::cast::<T, i64>(yf * invsize).unwrap();
+    let x: i64 = num_traits::cast::<T, i64>(coord.x * invsize).unwrap();
+    let y: i64 = num_traits::cast::<T, i64>(coord.y * invsize).unwrap();
     let mut xy: i64 = x << 32 | y;
 
     // todo ... big endian?
@@ -899,8 +939,8 @@ pub fn earcut<T: Float + Display, V: Vertices<T>>(
         // this hash algorithm
         let (mx, my) = (ll.minx, ll.miny);
         ll.nodes.iter_mut().for_each(|n| {
-            n.x = n.x - mx;
-            n.y = n.y - my;
+            n.coord.x = n.coord.x - mx;
+            n.coord.y = n.coord.y - my;
         });
         earcut_linked_hashed(&mut ll, outer_node, &mut triangles, 0);
     } else {
@@ -1024,8 +1064,8 @@ fn find_hole_bridge<T: Float + Display>(
     outer_node: LinkedListNodeIndex,
 ) -> LinkedListNodeIndex {
     let mut p = outer_node;
-    let hx = ll.nodes[hole].x;
-    let hy = ll.nodes[hole].y;
+    let hx = ll.nodes[hole].coord.x;
+    let hy = ll.nodes[hole].coord.y;
     let mut qx = T::neg_infinity();
     let mut m: Option<LinkedListNodeIndex> = None;
 
@@ -1033,22 +1073,28 @@ fn find_hole_bridge<T: Float + Display>(
     // point to the left; segment's endpoint with lesser x will be
     // potential connection point
     let calcx = |p: &LinkedListNode<T>| {
-        p.x + (hy - p.y) * (next!(ll, p.idx).x - p.x) / (next!(ll, p.idx).y - p.y)
+        p.coord.x
+            + (hy - p.coord.y) * (next!(ll, p.idx).coord.x - p.coord.x)
+                / (next!(ll, p.idx).coord.y - p.coord.y)
     };
     for (p, n) in ll
         .iter_pairs(p..outer_node)
-        .filter(|(p, n)| hy <= p.y && hy >= n.y)
-        .filter(|(p, n)| n.y != p.y)
+        .filter(|(p, n)| hy <= p.coord.y && hy >= n.coord.y)
+        .filter(|(p, n)| n.coord.y != p.coord.y)
         .filter(|(p, _)| calcx(p) <= hx)
     {
         if qx < calcx(p) {
             qx = calcx(p);
-            if qx == hx && hy == p.y {
+            if qx == hx && hy == p.coord.y {
                 return p.idx;
-            } else if qx == hx && hy == n.y {
+            } else if qx == hx && hy == n.coord.y {
                 return p.next_linked_list_node_index;
             }
-            m = if p.x < n.x { Some(p.idx) } else { Some(n.idx) };
+            m = if p.coord.x < n.coord.x {
+                Some(p.idx)
+            } else {
+                Some(n.idx)
+            };
         }
     }
 
@@ -1064,20 +1110,21 @@ fn find_hole_bridge<T: Float + Display>(
     // a valid connection; otherwise choose the point of the minimum
     // angle with the ray as connection point
 
-    let mp = LinkedListNode::new(0, ll.nodes[m].x, ll.nodes[m].y, 0);
+    let mp = LinkedListNode::new(0, ll.nodes[m].coord, 0);
     p = next!(ll, m).idx;
-    let x1 = if hy < mp.y { hx } else { qx };
-    let x2 = if hy < mp.y { qx } else { hx };
-    let n1 = LinkedListNode::new(0, x1, hy, 0);
-    let n2 = LinkedListNode::new(0, x2, hy, 0);
+    let x1 = if hy < mp.coord.y { hx } else { qx };
+    let x2 = if hy < mp.coord.y { qx } else { hx };
+    let n1 = LinkedListNode::new(0, Coord { x: x1, y: hy }, 0);
+    let n2 = LinkedListNode::new(0, Coord { x: x2, y: hy }, 0);
     let two = num_traits::cast::<f64, T>(2.).unwrap();
 
-    let calctan = |p: &LinkedListNode<T>| (hy - p.y).abs() / (hx - p.x); // tangential
+    let calctan = |p: &LinkedListNode<T>| (hy - p.coord.y).abs() / (hx - p.coord.x); // tangential
     ll.iter(p..m)
-        .filter(|p| hx > p.x && p.x >= mp.x)
+        .filter(|p| hx > p.coord.x && p.coord.x >= mp.coord.x)
         .filter(|p| NodeTriangle(n1, mp, n2).contains_point(**p))
         .fold((m, T::max_value() / two), |(m, tan_min), p| {
-            if ((calctan(p) < tan_min) || (calctan(p) == tan_min && p.x > ll.nodes[m].x))
+            if ((calctan(p) < tan_min)
+                || (calctan(p) == tan_min && p.coord.x > ll.nodes[m].coord.x))
                 && locally_inside(ll, p, &ll.nodes[hole])
             {
                 (p.idx, calctan(p))
@@ -1191,11 +1238,14 @@ fn middle_inside<T: Float + Display>(
 ) -> bool {
     let two = T::one() + T::one();
 
-    let (mx, my) = ((a.x + b.x) / two, (a.y + b.y) / two);
+    let (mx, my) = ((a.coord.x + b.coord.x) / two, (a.coord.y + b.coord.y) / two);
     ll.iter_pairs(a.idx..a.idx)
-        .filter(|(p, n)| (p.y > my) != (n.y > my))
-        .filter(|(p, n)| n.y != p.y)
-        .filter(|(p, n)| (mx) < ((n.x - p.x) * (my - p.y) / (n.y - p.y) + p.x))
+        .filter(|(p, n)| (p.coord.y > my) != (n.coord.y > my))
+        .filter(|(p, n)| n.coord.y != p.coord.y)
+        .filter(|(p, n)| {
+            (mx) < ((n.coord.x - p.coord.x) * (my - p.coord.y) / (n.coord.y - p.coord.y)
+                + p.coord.x)
+        })
         .fold(false, |inside, _| !inside)
 }
 
@@ -1278,18 +1328,8 @@ fn split_bridge_polygon<T: Float + Display>(
 ) -> LinkedListNodeIndex {
     let cidx = ll.nodes.len();
     let didx = cidx + 1;
-    let mut c = LinkedListNode::new(
-        ll.nodes[a].vertices_index,
-        ll.nodes[a].x,
-        ll.nodes[a].y,
-        cidx,
-    );
-    let mut d = LinkedListNode::new(
-        ll.nodes[b].vertices_index,
-        ll.nodes[b].x,
-        ll.nodes[b].y,
-        didx,
-    );
+    let mut c = LinkedListNode::new(ll.nodes[a].vertices_index, ll.nodes[a].coord, cidx);
+    let mut d = LinkedListNode::new(ll.nodes[b].vertices_index, ll.nodes[b].coord, didx);
 
     let an = ll.nodes[a].next_linked_list_node_index;
     let bp = ll.nodes[b].prev_linked_list_node_index;
