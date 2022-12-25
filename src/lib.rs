@@ -2,8 +2,6 @@ use std::{cmp, ops};
 
 static DIM: usize = 2;
 static NULL: usize = 0;
-//static DEBUG: usize = 4;
-static DEBUG: usize = 0; // dlogs get optimized away at 0
 
 #[cfg(test)]
 mod tests;
@@ -101,12 +99,6 @@ pub trait Vertices<T: Float> {
             s + (self.vertex(j) - self.vertex(i)) * (self.vertex(i + 1) + self.vertex(j + 1))
         })
     }
-}
-
-macro_rules! dlog {
-	($loglevel:expr, $($s:expr),*) => (
-		if DEBUG>=$loglevel { print!("{}:",$loglevel); println!($($s),+); }
-	)
 }
 
 // Note: none of the following macros work for Left-Hand-Side of assignment.
@@ -747,10 +739,6 @@ fn filter_points<T: Float>(
     start: LinkedListNodeIndex,
     end: Option<LinkedListNodeIndex>,
 ) -> LinkedListNodeIndex {
-    dlog!(
-        4,
-        "fn filter_points, eliminate colinear or duplicate points"
-    );
     let mut end = end.unwrap_or(start);
     if end >= ll.nodes.len() || start >= ll.nodes.len() {
         return NULL;
