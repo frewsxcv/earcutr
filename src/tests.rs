@@ -703,7 +703,6 @@ fn test_iss45() {
 }
 
 #[test]
-#[should_panic] // FIXME: This shouldn't panic
 fn test_infinite_loop_bug() {
     let coords = [
         3482952.0523706395,
