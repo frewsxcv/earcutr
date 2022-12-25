@@ -130,11 +130,6 @@ macro_rules! prevref {
         &$ll.nodes[$ll.nodes[$idx].prev_linked_list_node_index]
     };
 }
-macro_rules! prevz {
-    ($ll:expr,$idx:expr) => {
-        &$ll.nodes[$ll.nodes[$idx].prevz_idx]
-    };
-}
 
 impl<T: Float> LinkedLists<T> {
     fn iter(&self, r: ops::Range<LinkedListNodeIndex>) -> NodeIterator<T> {
@@ -221,7 +216,7 @@ impl<T: Float> LinkedLists<T> {
             }
         }
 
-        let pzi = prevz!(self, start).idx;
+        let pzi = self.nodes[start].prevz_idx;
         self.nodes[pzi].nextz_idx = NULL;
         self.nodes[start].prevz_idx = NULL;
         sort_linked(self, start);
