@@ -70,10 +70,8 @@ impl<T: Float> LinkedListNode<T> {
 pub struct LinkedLists<T: Float> {
     nodes: Vec<LinkedListNode<T>>,
     invsize: T,
-    minx: T,
-    miny: T,
-    maxx: T,
-    maxy: T,
+    min: Coord<T>,
+    max: Coord<T>,
     usehash: bool,
 }
 
@@ -174,10 +172,8 @@ impl<T: Float> LinkedLists<T> {
         let mut ll = LinkedLists {
             nodes: Vec::with_capacity(size_hint),
             invsize: T::zero(),
-            minx: T::max_value(),
-            miny: T::max_value(),
-            maxx: T::min_value(),
-            maxy: T::min_value(),
+            min: Coord { x: T::max_value(), y: T::max_value() },
+            max: Coord { x: T::min_value(), y: T::min_value() },
             usehash: true,
         };
         // ll.nodes[0] is the NULL node. For example usage, see remove_node()
@@ -838,9 +834,9 @@ fn linked_list_add_contour<T: Float, V: Vertices<T>>(
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(vertices.vertex(i + 1), ll.miny);
-                ll.maxx = T::max(vertices.vertex(i), ll.maxx);
-                ll.maxy = T::max(vertices.vertex(i + 1), ll.maxy);
+                ll.min.y = T::min(vertices.vertex(i + 1), ll.min.y);
+                ll.max.x = T::max(vertices.vertex(i), ll.max.x);
+                ll.max.y = T::max(vertices.vertex(i + 1), ll.max.y);
             }
         }
     } else {
@@ -858,14 +854,14 @@ fn linked_list_add_contour<T: Float, V: Vertices<T>>(
                 leftmost_idx = lastidx
             };
             if ll.usehash {
-                ll.miny = T::min(vertices.vertex(i + 1), ll.miny);
-                ll.maxx = T::max(vertices.vertex(i), ll.maxx);
-                ll.maxy = T::max(vertices.vertex(i + 1), ll.maxy);
+                ll.min.y = T::min(vertices.vertex(i + 1), ll.min.y);
+                ll.max.x = T::max(vertices.vertex(i), ll.max.x);
+                ll.max.y = T::max(vertices.vertex(i + 1), ll.max.y);
             }
         }
     }
 
-    ll.minx = T::min(contour_minx, ll.minx);
+    ll.min.x = T::min(contour_minx, ll.min.x);
 
     if ll.nodes[lastidx.unwrap()].xy_eq(*nextref!(ll, lastidx.unwrap())) {
         ll.remove_node(lastidx.unwrap());
@@ -929,14 +925,14 @@ pub fn earcut<T: Float, V: Vertices<T>>(
     let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node);
 
     if ll.usehash {
-        ll.invsize = calc_invsize(ll.minx, ll.miny, ll.maxx, ll.maxy);
+        ll.invsize = calc_invsize(ll.min.x, ll.min.y, ll.max.x, ll.max.y);
 
         // translate all points so min is 0,0. prevents subtraction inside
         // zorder. also note invsize does not depend on translation in space
         // if one were translating in a space with an even spaced grid of points.
         // floating point space is not evenly spaced, but it is close enough for
         // this hash algorithm
-        let (mx, my) = (ll.minx, ll.miny);
+        let (mx, my) = (ll.min.x, ll.min.y);
         ll.nodes.iter_mut().for_each(|n| {
             n.coord.x = n.coord.x - mx;
             n.coord.y = n.coord.y - my;
