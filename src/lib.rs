@@ -65,6 +65,14 @@ impl<T: Float> LinkedListNode<T> {
     fn xy_eq(&self, other: LinkedListNode<T>) -> bool {
         self.coord == other.coord
     }
+
+    fn prev_linked_list_node(&self, linked_list_nodes: &LinkedLists<T>) -> LinkedListNode<T> {
+        linked_list_nodes.nodes[self.prev_linked_list_node_index]
+    }
+
+    fn next_linked_list_node(&self, linked_list_nodes: &LinkedLists<T>) -> LinkedListNode<T> {
+        linked_list_nodes.nodes[self.next_linked_list_node_index]
+    }
 }
 
 pub struct LinkedLists<T: Float> {
@@ -593,9 +601,9 @@ struct NodeTriangle<T: Float>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNo
 impl<T: Float> NodeTriangle<T> {
     fn from_ear_node(ear_node: LinkedListNode<T>, ll: &mut LinkedLists<T>) -> Self {
         NodeTriangle(
-            ll.nodes[ear_node.prev_linked_list_node_index],
+            ear_node.prev_linked_list_node(ll),
             ear_node,
-            ll.nodes[ear_node.next_linked_list_node_index],
+            ear_node.next_linked_list_node(ll),
         )
     }
 
