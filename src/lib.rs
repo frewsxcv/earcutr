@@ -286,6 +286,75 @@ impl<T: Float> LinkedLists<T> {
             }
         }
     }
+
+    // add new nodes to an existing linked list.
+    fn add_contour<V: Vertices<T>>(
+        &mut self,
+        vertices: &V,
+        start: VerticesIndex,
+        end: VerticesIndex,
+        clockwise: bool,
+    ) -> (LinkedListNodeIndex, LinkedListNodeIndex) {
+        assert!(start <= vertices.len() && end <= vertices.len() && !vertices.is_empty());
+        // Previous code:
+        //
+        // if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
+        //     return (None, None);
+        // }
+        let mut lastidx = None;
+        let mut leftmost_idx = None;
+        let mut contour_minx = T::max_value();
+
+        if clockwise == (vertices.signed_area(start, end) > T::zero()) {
+            for i in (start..end).step_by(DIM) {
+                lastidx = Some(self.insert_node(
+                    i / DIM,
+                    Coord {
+                        x: vertices.vertex(i),
+                        y: vertices.vertex(i + 1),
+                    },
+                    lastidx,
+                ));
+                if contour_minx > vertices.vertex(i) {
+                    contour_minx = vertices.vertex(i);
+                    leftmost_idx = lastidx
+                };
+                if self.usehash {
+                    self.min.y = vertices.vertex(i + 1).min(self.min.y);
+                    self.max.x = vertices.vertex(i).max(self.max.x);
+                    self.max.y = vertices.vertex(i + 1).max(self.max.y);
+                }
+            }
+        } else {
+            for i in (start..=(end - DIM)).rev().step_by(DIM) {
+                lastidx = Some(self.insert_node(
+                    i / DIM,
+                    Coord {
+                        x: vertices.vertex(i),
+                        y: vertices.vertex(i + 1),
+                    },
+                    lastidx,
+                ));
+                if contour_minx > vertices.vertex(i) {
+                    contour_minx = vertices.vertex(i);
+                    leftmost_idx = lastidx
+                };
+                if self.usehash {
+                    self.min.y = vertices.vertex(i + 1).min(self.min.y);
+                    self.max.x = vertices.vertex(i).max(self.max.x);
+                    self.max.y = vertices.vertex(i + 1).max(self.max.y);
+                }
+            }
+        }
+
+        self.min.x = contour_minx.min(self.min.x);
+
+        if self.nodes[lastidx.unwrap()].xy_eq(*nextref!(self, lastidx.unwrap())) {
+            self.remove_node(lastidx.unwrap());
+            lastidx = Some(self.nodes[lastidx.unwrap()].next_linked_list_node_index);
+        }
+        (lastidx.unwrap(), leftmost_idx.unwrap())
+    }
 }
 
 struct NodeIterator<'a, T: Float> {
@@ -379,8 +448,7 @@ fn eliminate_holes<T: Float, V: Vertices<T>>(
         } else {
             vertices.len()
         };
-        let (list, leftmost_idx) = linked_list_add_contour(
-            ll,
+        let (list, leftmost_idx) = ll.add_contour(
             vertices,
             vertices_hole_start_index,
             vertices_hole_end_index,
@@ -789,77 +857,8 @@ fn linked_list<T: Float, V: Vertices<T>>(
     if vertices.len() < 80 {
         ll.usehash = false
     };
-    let (last_idx, _) = linked_list_add_contour(&mut ll, vertices, start, end, clockwise);
+    let (last_idx, _) = ll.add_contour(vertices, start, end, clockwise);
     (ll, last_idx)
-}
-
-// add new nodes to an existing linked list.
-fn linked_list_add_contour<T: Float, V: Vertices<T>>(
-    ll: &mut LinkedLists<T>,
-    vertices: &V,
-    start: VerticesIndex,
-    end: VerticesIndex,
-    clockwise: bool,
-) -> (LinkedListNodeIndex, LinkedListNodeIndex) {
-    assert!(start <= vertices.len() && end <= vertices.len() && !vertices.is_empty());
-    // Previous code:
-    //
-    // if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
-    //     return (None, None);
-    // }
-    let mut lastidx = None;
-    let mut leftmost_idx = None;
-    let mut contour_minx = T::max_value();
-
-    if clockwise == (vertices.signed_area(start, end) > T::zero()) {
-        for i in (start..end).step_by(DIM) {
-            lastidx = Some(ll.insert_node(
-                i / DIM,
-                Coord {
-                    x: vertices.vertex(i),
-                    y: vertices.vertex(i + 1),
-                },
-                lastidx,
-            ));
-            if contour_minx > vertices.vertex(i) {
-                contour_minx = vertices.vertex(i);
-                leftmost_idx = lastidx
-            };
-            if ll.usehash {
-                ll.min.y = vertices.vertex(i + 1).min(ll.min.y);
-                ll.max.x = vertices.vertex(i).max(ll.max.x);
-                ll.max.y = vertices.vertex(i + 1).max(ll.max.y);
-            }
-        }
-    } else {
-        for i in (start..=(end - DIM)).rev().step_by(DIM) {
-            lastidx = Some(ll.insert_node(
-                i / DIM,
-                Coord {
-                    x: vertices.vertex(i),
-                    y: vertices.vertex(i + 1),
-                },
-                lastidx,
-            ));
-            if contour_minx > vertices.vertex(i) {
-                contour_minx = vertices.vertex(i);
-                leftmost_idx = lastidx
-            };
-            if ll.usehash {
-                ll.min.y = vertices.vertex(i + 1).min(ll.min.y);
-                ll.max.x = vertices.vertex(i).max(ll.max.x);
-                ll.max.y = vertices.vertex(i + 1).max(ll.max.y);
-            }
-        }
-    }
-
-    ll.min.x = contour_minx.min(ll.min.x);
-
-    if ll.nodes[lastidx.unwrap()].xy_eq(*nextref!(ll, lastidx.unwrap())) {
-        ll.remove_node(lastidx.unwrap());
-        lastidx = Some(ll.nodes[lastidx.unwrap()].next_linked_list_node_index);
-    }
-    (lastidx.unwrap(), leftmost_idx.unwrap())
 }
 
 // z-order of a point given coords and inverse of the longer side of

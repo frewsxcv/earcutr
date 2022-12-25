@@ -518,7 +518,7 @@ fn test_eliminate_hole() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&body, 0, bodyend, true);
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
     assert!(cycle_len(&ll, 1) == 4);
     assert!(cycle_len(&ll, 5) == 4);
     ll.eliminate_hole(holestart / DIM + 1, 1);
@@ -532,7 +532,7 @@ fn test_eliminate_hole() {
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
     assert!(cycle_len(&ll, 1) == 10);
     assert!(cycle_len(&ll, 5) == 10);
     assert!(cycle_len(&ll, 11) == 4);
@@ -557,14 +557,14 @@ fn test_cycle_len() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&body, 0, bodyend, true);
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
 
     let hole = vec![0.2, 0.2, 0.8, 0.2, 0.8, 0.8];
     let bodyend = body.len();
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
 
     dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
@@ -580,14 +580,14 @@ fn test_cycles_report() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&body, 0, bodyend, true);
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
 
     let hole = vec![0.2, 0.2, 0.8, 0.2, 0.8, 0.8];
     let bodyend = body.len();
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    linked_list_add_contour(&mut ll, &body, holestart, holeend, false);
+    ll.add_contour(&body, holestart, holeend, false);
 
     dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
