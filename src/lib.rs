@@ -105,19 +105,23 @@ pub struct LinkedLists<T: Float> {
     usehash: bool,
 }
 
-pub trait Vertices<T: Float> {
-    fn len(&self) -> usize;
+struct Vertices<'a, T: Float>(&'a [T]);
 
-    fn is_empty(&self) -> bool;
+impl<'a, T: Float> Vertices<'a, T> {
+    fn is_empty(&'a self) -> bool {
+        self.0.is_empty()
+    }
 
-    fn vertex(&self, index: usize) -> T;
+    fn len(&'a self) -> usize {
+        self.0.len()
+    }
 
     fn signed_area(&self, start: VerticesIndex, end: VerticesIndex) -> T {
         let i = (start..end).step_by(DIM);
         let j = (start..end).cycle().skip((end - DIM) - start).step_by(DIM);
         let zero = T::zero();
         i.zip(j).fold(zero, |s, (i, j)| {
-            s + (self.vertex(j) - self.vertex(i)) * (self.vertex(i + 1) + self.vertex(j + 1))
+            s + (self.0[j] - self.0[i]) * (self.0[i + 1] + self.0[j + 1])
         })
     }
 }
@@ -316,9 +320,9 @@ impl<T: Float> LinkedLists<T> {
     }
 
     // add new nodes to an existing linked list.
-    fn add_contour<V: Vertices<T>>(
+    fn add_contour(
         &mut self,
-        vertices: &V,
+        vertices: &Vertices<T>,
         start: VerticesIndex,
         end: VerticesIndex,
         clockwise: bool,
@@ -338,19 +342,19 @@ impl<T: Float> LinkedLists<T> {
                 lastidx = Some(self.insert_node(
                     i / DIM,
                     Coord {
-                        x: vertices.vertex(i),
-                        y: vertices.vertex(i + 1),
+                        x: vertices.0[i],
+                        y: vertices.0[i + 1],
                     },
                     lastidx,
                 ));
-                if contour_minx > vertices.vertex(i) {
-                    contour_minx = vertices.vertex(i);
+                if contour_minx > vertices.0[i] {
+                    contour_minx = vertices.0[i];
                     leftmost_idx = lastidx
                 };
                 if self.usehash {
-                    self.min.y = vertices.vertex(i + 1).min(self.min.y);
-                    self.max.x = vertices.vertex(i).max(self.max.x);
-                    self.max.y = vertices.vertex(i + 1).max(self.max.y);
+                    self.min.y = vertices.0[i + 1].min(self.min.y);
+                    self.max.x = vertices.0[i].max(self.max.x);
+                    self.max.y = vertices.0[i + 1].max(self.max.y);
                 }
             }
         } else {
@@ -358,19 +362,19 @@ impl<T: Float> LinkedLists<T> {
                 lastidx = Some(self.insert_node(
                     i / DIM,
                     Coord {
-                        x: vertices.vertex(i),
-                        y: vertices.vertex(i + 1),
+                        x: vertices.0[i],
+                        y: vertices.0[i + 1],
                     },
                     lastidx,
                 ));
-                if contour_minx > vertices.vertex(i) {
-                    contour_minx = vertices.vertex(i);
+                if contour_minx > vertices.0[i] {
+                    contour_minx = vertices.0[i];
                     leftmost_idx = lastidx
                 };
                 if self.usehash {
-                    self.min.y = vertices.vertex(i + 1).min(self.min.y);
-                    self.max.x = vertices.vertex(i).max(self.max.x);
-                    self.max.y = vertices.vertex(i + 1).max(self.max.y);
+                    self.min.y = vertices.0[i + 1].min(self.min.y);
+                    self.max.x = vertices.0[i].max(self.max.x);
+                    self.max.y = vertices.0[i + 1].max(self.max.y);
                 }
             }
         }
@@ -472,9 +476,9 @@ impl<'a, T: Float> Iterator for NodePairIterator<'a, T> {
 
 // link every hole into the outer loop, producing a single-ring polygon
 // without holes
-fn eliminate_holes<T: Float, V: Vertices<T>>(
+fn eliminate_holes<T: Float>(
     ll: &mut LinkedLists<T>,
-    vertices: &V,
+    vertices: &Vertices<T>,
     hole_indices: &[VerticesIndex],
     inouter_node: LinkedListNodeIndex,
 ) -> LinkedListNodeIndex {
@@ -485,7 +489,7 @@ fn eliminate_holes<T: Float, V: Vertices<T>>(
         let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
             hole_indices[i + 1] * DIM
         } else {
-            vertices.len()
+            vertices.0.len()
         };
         let (list, leftmost_idx) = ll.add_contour(
             vertices,
@@ -514,34 +518,6 @@ fn eliminate_holes<T: Float, V: Vertices<T>>(
     }
     outer_node
 } // elim holes
-
-impl<const N: usize, T: Float> Vertices<T> for [T; N] {
-    fn len(&self) -> usize {
-        <[T]>::len(self)
-    }
-
-    fn is_empty(&self) -> bool {
-        <[T]>::is_empty(self)
-    }
-
-    fn vertex(&self, index: usize) -> T {
-        self[index]
-    }
-}
-
-impl<T: Float> Vertices<T> for Vec<T> {
-    fn len(&self) -> usize {
-        <Vec<T>>::len(self)
-    }
-
-    fn is_empty(&self) -> bool {
-        <Vec<T>>::is_empty(self)
-    }
-
-    fn vertex(&self, index: usize) -> T {
-        self[index]
-    }
-}
 
 // minx, miny and invsize are later used to transform coords
 // into integers for z-order calculation
@@ -878,8 +854,8 @@ fn filter_points<T: Float>(
 
 // create a circular doubly linked list from polygon points in the
 // specified winding order
-fn linked_list<T: Float, V: Vertices<T>>(
-    vertices: &V,
+fn linked_list<T: Float>(
+    vertices: &Vertices<T>,
     start: usize,
     end: usize,
     clockwise: bool,
@@ -905,8 +881,8 @@ impl FinalTriangleIndices {
     }
 }
 
-pub fn earcut<T: Float, V: Vertices<T>>(
-    vertices: &V,
+pub fn earcut<T: Float>(
+    vertices: &[T],
     hole_indices: &[VerticesIndex],
     dims: usize,
 ) -> Vec<usize> {
@@ -919,13 +895,14 @@ pub fn earcut<T: Float, V: Vertices<T>>(
         _ => hole_indices[0] * DIM,
     };
 
-    let (mut ll, outer_node) = linked_list(vertices, 0, outer_len, true);
+    let vertices = Vertices(vertices);
+    let (mut ll, outer_node) = linked_list(&vertices, 0, outer_len, true);
     let mut triangles = FinalTriangleIndices(Vec::with_capacity(vertices.len() / DIM));
     if ll.nodes.len() == 1 || DIM != dims {
         return triangles.0;
     }
 
-    let outer_node = eliminate_holes(&mut ll, vertices, hole_indices, outer_node);
+    let outer_node = eliminate_holes(&mut ll, &vertices, hole_indices, outer_node);
 
     if ll.usehash {
         ll.invsize = calc_invsize(ll.min, ll.max);

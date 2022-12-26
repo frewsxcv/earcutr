@@ -170,7 +170,7 @@ fn test_indices_3d() {
 
 #[test]
 fn test_empty() {
-    let indices = earcutr::earcut::<f64, [f64; 0]>(&[], &[], 2);
+    let indices = earcutr::earcut::<f64>(&[], &[], 2);
     println!("{:?}", indices);
     assert!(indices.is_empty());
 }

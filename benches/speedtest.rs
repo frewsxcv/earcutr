@@ -150,7 +150,7 @@ fn bench_indices_3d(criterion: &mut Criterion) {
 fn bench_empty(criterion: &mut Criterion) {
     criterion.bench_function("bench_empty", |bench| {
         bench.iter(|| {
-            let _indices = black_box(earcutr::earcut::<f32, [f32; 0]>(&[], &[], 2));
+            let _indices = black_box(earcutr::earcut::<f32>(&[], &[], 2));
         })
     });
 }

@@ -90,8 +90,8 @@ pub fn flatten<T: Float + Display>(data: &Vec<Vec<Vec<T>>>) -> (Vec<T>, Vec<usiz
 
 // return a percentage difference between the polygon area and its
 // triangulation area; used to verify correctness of triangulation
-pub fn deviation<T: Float + Display, V: crate::Vertices<T>>(
-    vertices: &V,
+pub fn deviation<T: Float + Display>(
+    vertices: &[T],
     hole_indices: &[usize],
     dims: usize,
     triangles: &[usize],
@@ -99,6 +99,7 @@ pub fn deviation<T: Float + Display, V: crate::Vertices<T>>(
     if DIM != dims {
         return T::nan();
     }
+    let vertices = crate::Vertices(vertices);
     let mut indices = hole_indices.to_vec();
     indices.push(vertices.len() / DIM);
     let (ix, iy) = (indices.iter(), indices.iter().skip(1));
@@ -111,11 +112,9 @@ pub fn deviation<T: Float + Display, V: crate::Vertices<T>>(
     let j = triangles.iter().skip(1).step_by(3).map(|x| x * DIM);
     let k = triangles.iter().skip(2).step_by(3).map(|x| x * DIM);
     let triangles_area = i.zip(j).zip(k).fold(T::zero(), |ta, ((a, b), c)| {
-        ta + ((vertices.vertex(a) - vertices.vertex(c))
-            * (vertices.vertex(b + 1) - vertices.vertex(a + 1))
-            - (vertices.vertex(a) - vertices.vertex(b))
-                * (vertices.vertex(c + 1) - vertices.vertex(a + 1)))
-        .abs()
+        ta + ((vertices.0[a] - vertices.0[c]) * (vertices.0[b + 1] - vertices.0[a + 1])
+            - (vertices.0[a] - vertices.0[b]) * (vertices.0[c + 1] - vertices.0[a + 1]))
+            .abs()
     });
 
     match polygon_area.is_zero() && triangles_area.is_zero() {
