@@ -386,11 +386,7 @@ impl<T: Float> LinkedLists<T> {
 
     // check if a diagonal between two polygon nodes is valid (lies in
     // polygon interior)
-    fn is_valid_diagonal(
-        &self,
-        a: &LinkedListNode<T>,
-        b: &LinkedListNode<T>,
-    ) -> bool {
+    fn is_valid_diagonal(&self, a: &LinkedListNode<T>, b: &LinkedListNode<T>) -> bool {
         next!(self, a.idx).vertices_index != b.vertices_index
             && prev!(self, a.idx).vertices_index != b.vertices_index
             && !intersects_polygon(self, *a, *b)
@@ -721,18 +717,14 @@ impl<T: Float> NodeTriangle<T> {
     fn contains_point(&self, p: LinkedListNode<T>) -> bool {
         let zero = T::zero();
 
-        let a = self.0;
-        let b = self.1;
-        let c = self.2;
-
-        ((c.coord.x - p.coord.x) * (a.coord.y - p.coord.y)
-            - (a.coord.x - p.coord.x) * (c.coord.y - p.coord.y)
+        ((self.2.coord.x - p.coord.x) * (self.0.coord.y - p.coord.y)
+            - (self.0.coord.x - p.coord.x) * (self.2.coord.y - p.coord.y)
             >= zero)
-            && ((a.coord.x - p.coord.x) * (b.coord.y - p.coord.y)
-                - (b.coord.x - p.coord.x) * (a.coord.y - p.coord.y)
+            && ((self.0.coord.x - p.coord.x) * (self.1.coord.y - p.coord.y)
+                - (self.1.coord.x - p.coord.x) * (self.0.coord.y - p.coord.y)
                 >= zero)
-            && ((b.coord.x - p.coord.x) * (c.coord.y - p.coord.y)
-                - (c.coord.x - p.coord.x) * (b.coord.y - p.coord.y)
+            && ((self.1.coord.x - p.coord.x) * (self.2.coord.y - p.coord.y)
+                - (self.2.coord.x - p.coord.x) * (self.1.coord.y - p.coord.y)
                 >= zero)
     }
 
