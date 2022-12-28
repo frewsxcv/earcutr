@@ -19,6 +19,19 @@ pub trait Float: num_traits::float::Float {}
 
 impl<T> Float for T where T: num_traits::float::Float {}
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Error {
+    Unknown,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl std::error::Error for Error {}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Coord<T: Float> {
     x: T,
@@ -29,11 +42,11 @@ impl<T: Float> Coord<T> {
     // z-order of a point given coords and inverse of the longer side of
     // data bbox
     #[inline(always)]
-    fn zorder(&self, invsize: T) -> Result<i32, ()> {
+    fn zorder(&self, invsize: T) -> Result<i32, Error> {
         // coords are transformed into non-negative 15-bit integer range
         // stored in two 32bit ints, which are combined into a single 64 bit int.
-        let x: i64 = num_traits::cast::<T, i64>(self.x * invsize).ok_or(())?;
-        let y: i64 = num_traits::cast::<T, i64>(self.y * invsize).ok_or(())?;
+        let x: i64 = num_traits::cast::<T, i64>(self.x * invsize).ok_or(Error::Unknown)?;
+        let y: i64 = num_traits::cast::<T, i64>(self.y * invsize).ok_or(Error::Unknown)?;
         let mut xy: i64 = x << 32 | y;
 
         // todo ... big endian?
@@ -224,7 +237,7 @@ impl<T: Float> LinkedLists<T> {
     }
 
     // interlink polygon nodes in z-order
-    fn index_curve(&mut self, start: LinkedListNodeIndex) -> Result<(), ()> {
+    fn index_curve(&mut self, start: LinkedListNodeIndex) -> Result<(), Error> {
         let invsize = self.invsize;
         let mut p = start;
         loop {
@@ -327,17 +340,17 @@ impl<T: Float> LinkedLists<T> {
         start: VerticesIndex,
         end: VerticesIndex,
         clockwise: bool,
-    ) -> Result<(LinkedListNodeIndex, LinkedListNodeIndex), ()> {
+    ) -> Result<(LinkedListNodeIndex, LinkedListNodeIndex), Error> {
         if start > vertices.len() || end > vertices.len() || vertices.is_empty() {
-            return Err(());
+            return Err(Error::Unknown);
         }
 
         if end < DIM || end - DIM < start {
-            return Err(());
+            return Err(Error::Unknown);
         }
 
         if end < DIM {
-            return Err(());
+            return Err(Error::Unknown);
         }
 
         let mut lastidx = None;
@@ -488,13 +501,13 @@ fn eliminate_holes<T: Float>(
     vertices: &Vertices<T>,
     hole_indices: &[VerticesIndex],
     inouter_node: LinkedListNodeIndex,
-) -> Result<LinkedListNodeIndex, ()> {
+) -> Result<LinkedListNodeIndex, Error> {
     let mut outer_node = inouter_node;
     let mut queue: Vec<LinkedListNode<T>> = Vec::new();
     for i in 0..hole_indices.len() {
         let vertices_hole_start_index = hole_indices[i] * DIM;
         let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
-            hole_indices[i + 1].checked_mul(DIM).ok_or(())?
+            hole_indices[i + 1].checked_mul(DIM).ok_or(Error::Unknown)?
         } else {
             vertices.0.len()
         };
@@ -542,7 +555,7 @@ fn earcut_linked_hashed<const PASS: usize, T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangle_indices: &mut FinalTriangleIndices,
-) -> Result<(), ()> {
+) -> Result<(), Error> {
     // interlink polygon nodes in z-order
     if PASS == 0 {
         ll.index_curve(ear_idx)?;
@@ -593,7 +606,7 @@ fn earcut_linked_unhashed<const PASS: usize, T: Float>(
     ll: &mut LinkedLists<T>,
     mut ear_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
-) -> Result<(), ()> {
+) -> Result<(), Error> {
     // iterate through ears, slicing them one by one
     let mut stop_idx = ear_idx;
     let mut prev_idx = 0;
@@ -714,7 +727,7 @@ impl<T: Float> NodeTriangle<T> {
     }
 
     #[inline(always)]
-    fn is_ear_hashed(&self, ll: &mut LinkedLists<T>) -> Result<bool, ()> {
+    fn is_ear_hashed(&self, ll: &mut LinkedLists<T>) -> Result<bool, Error> {
         let zero = T::zero();
 
         if self.area() >= zero {
@@ -868,7 +881,7 @@ fn linked_list<T: Float>(
     start: usize,
     end: usize,
     clockwise: bool,
-) -> Result<(LinkedLists<T>, LinkedListNodeIndex), ()> {
+) -> Result<(LinkedLists<T>, LinkedListNodeIndex), Error> {
     let mut ll: LinkedLists<T> = LinkedLists::new(vertices.len() / DIM);
     if vertices.len() < 80 {
         ll.usehash = false
@@ -894,23 +907,23 @@ pub fn earcut<T: Float>(
     vertices: &[T],
     hole_indices: &[VerticesIndex],
     dims: usize,
-) -> Result<Vec<usize>, ()> {
+) -> Result<Vec<usize>, Error> {
     if vertices.is_empty() {
-        return Err(());
+        return Err(Error::Unknown);
     }
 
     if vertices.len() % 2 == 1 || dims > vertices.len() {
-        return Err(());
+        return Err(Error::Unknown);
     }
 
     let outer_len = match hole_indices.first() {
         Some(first_hole_index) => {
-            let outer_len = first_hole_index.checked_mul(DIM).ok_or(())?;
+            let outer_len = first_hole_index.checked_mul(DIM).ok_or(Error::Unknown)?;
             if outer_len > vertices.len() || outer_len == 0 {
-                return Err(());
+                return Err(Error::Unknown);
             }
             if outer_len % 2 == 1 {
-                return Err(());
+                return Err(Error::Unknown);
             }
             outer_len
         }
@@ -1022,7 +1035,7 @@ fn split_earcut<T: Float>(
     ll: &mut LinkedLists<T>,
     start_idx: LinkedListNodeIndex,
     triangles: &mut FinalTriangleIndices,
-) -> Result<(), ()> {
+) -> Result<(), Error> {
     // look for a valid diagonal that divides the polygon into two
     let mut a = start_idx;
     loop {

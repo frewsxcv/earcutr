@@ -93,7 +93,7 @@ fn benchy(nm: &str) {
 
     println!("report for {}", nm);
     for _ in 0..iters {
-        triangles = earcutr::earcut(&data, &holeidxs, dimensions);
+        triangles = earcutr::earcut(&data, &holeidxs, dimensions).unwrap();
     }
     println!("{:?}", triangles);
     println!("num tris {}", triangles.len() / 3);

@@ -171,7 +171,7 @@ fn horsh_ll<T: num_traits::float::Float + std::fmt::Display>(
 #[test]
 fn test_empty() {
     let result = earcut::<f32>(&[], &[], 2);
-    assert_eq!(result, &[] as &[usize]);
+    assert_eq!(result, Ok(vec![]));
 }
 
 #[test]
@@ -698,7 +698,7 @@ fn test_iss45() {
     ];
     let (coords, hole_indices, dims) = crate::legacy::flatten(&data);
     assert!(DIM == dims);
-    let triangles = earcut(&coords, &hole_indices, DIM);
+    let triangles = earcut(&coords, &hole_indices, DIM).unwrap();
     assert!(triangles.len() > 4);
 }
 

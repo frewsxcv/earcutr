@@ -117,7 +117,7 @@ fn area_test(filename: &str, expected_num_tris: usize, expected_deviation: f64) 
                         Some(parsed_data) => {
                             xdata = parsed_data;
                             let (data, holeidxs, dimensions) = earcutr::legacy::flatten(&xdata);
-                            triangles = earcutr::earcut(&data, &holeidxs, dimensions);
+                            triangles = earcutr::earcut(&data, &holeidxs, dimensions).unwrap();
                             actual_num_tris = triangles.len() / 3;
                             actual_deviation =
                                 earcutr::deviation(&data, &holeidxs, dimensions, &triangles);
@@ -150,7 +150,7 @@ fn area_test(filename: &str, expected_num_tris: usize, expected_deviation: f64) 
 
 #[test]
 fn test_indices_2d() {
-    let indices = earcutr::earcut(&[10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0], &[], 2);
+    let indices = earcutr::earcut(&[10.0, 0.0, 0.0, 50.0, 60.0, 60.0, 70.0, 10.0], &[], 2).unwrap();
     assert!(indices == vec![1, 0, 3, 3, 2, 1]);
 }
 
@@ -170,8 +170,7 @@ fn test_indices_3d() {
 
 #[test]
 fn test_empty() {
-    let indices = earcutr::earcut::<f64>(&[], &[], 2);
-    println!("{:?}", indices);
+    let indices = earcutr::earcut::<f64>(&[], &[], 2).unwrap();
     assert!(indices.is_empty());
 }
 
