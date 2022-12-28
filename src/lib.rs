@@ -20,6 +20,7 @@ pub trait Float: num_traits::float::Float {}
 impl<T> Float for T where T: num_traits::float::Float {}
 
 #[derive(Debug, PartialEq, Copy, Clone)]
+#[non_exhaustive]
 pub enum Error {
     Unknown,
 }
