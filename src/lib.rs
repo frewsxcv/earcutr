@@ -26,8 +26,10 @@ pub enum Error {
 }
 
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, mut f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Unknown => write!(&mut f, "Unknown error"),
+        }
     }
 }
 
