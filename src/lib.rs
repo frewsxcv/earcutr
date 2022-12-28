@@ -1104,11 +1104,7 @@ fn find_hole_bridge<T: Float>(
             } else if qx == hx && hy == n.coord.y {
                 return p.next_linked_list_node_index;
             }
-            m = if p.coord.x < n.coord.x {
-                Some(p.idx)
-            } else {
-                Some(n.idx)
-            };
+            m = Some(if p.coord.x < n.coord.x { p.idx } else { n.idx });
         }
     }
 
