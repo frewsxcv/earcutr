@@ -1,4 +1,5 @@
-use std::{cmp, ops};
+use itertools::Itertools;
+use std::{cmp, iter, ops};
 
 static DIM: usize = 2;
 static NULL: usize = 0;
@@ -507,13 +508,14 @@ fn eliminate_holes<T: Float>(
 ) -> Result<LinkedListNodeIndex, Error> {
     let mut outer_node = inouter_node;
     let mut queue: Vec<LinkedListNode<T>> = Vec::new();
-    for i in 0..hole_indices.len() {
-        let vertices_hole_start_index = hole_indices[i] * DIM;
-        let vertices_hole_end_index = if i < (hole_indices.len() - 1) {
-            hole_indices[i + 1].checked_mul(DIM).ok_or(Error::Unknown)?
-        } else {
-            vertices.0.len()
-        };
+    for (vertices_hole_start_index, vertices_hole_end_index) in hole_indices
+        .iter()
+        .map(|index| index.checked_mul(DIM).ok_or(Error::Unknown))
+        .chain(iter::once(Ok(vertices.0.len())))
+        .tuple_windows()
+    {
+        let vertices_hole_start_index = vertices_hole_start_index?;
+        let vertices_hole_end_index = vertices_hole_end_index?;
         let (list, leftmost_idx) = ll.add_contour(
             vertices,
             vertices_hole_start_index,
