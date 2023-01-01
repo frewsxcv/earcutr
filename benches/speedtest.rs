@@ -8,7 +8,7 @@ use std::io::Read;
 use std::io::Write;
 
 // this is to "force" optimized code to measure results, by outputting
-fn mkoutput(filename_w_dashes: &str, triangles: Vec<usize>) {
+fn mkoutput(filename_w_dashes: &str, triangles: &[usize]) {
     let filename = str::replace(filename_w_dashes, "-", "_");
     let outfile = &format!("benches/benchoutput/{}.js", filename);
     match OpenOptions::new()
@@ -165,8 +165,8 @@ fn bench_building(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_dude(criterion: &mut Criterion) {
@@ -177,8 +177,8 @@ fn bench_dude(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water(criterion: &mut Criterion) {
@@ -189,8 +189,8 @@ fn bench_water(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water2(criterion: &mut Criterion) {
@@ -201,8 +201,8 @@ fn bench_water2(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water3(criterion: &mut Criterion) {
@@ -214,8 +214,8 @@ fn bench_water3(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water3b(criterion: &mut Criterion) {
@@ -227,8 +227,8 @@ fn bench_water3b(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water4(criterion: &mut Criterion) {
@@ -240,8 +240,8 @@ fn bench_water4(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_water_huge(criterion: &mut Criterion) {
@@ -256,10 +256,9 @@ fn bench_water_huge(criterion: &mut Criterion) {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
             //	}
         });
+        mkoutput(nm, &triangles);
     });
     //PROFILER.lock().unwrap().stop().unwrap();
-
-    mkoutput(nm, triangles);
 }
 
 fn bench_water_huge2(criterion: &mut Criterion) {
@@ -270,8 +269,8 @@ fn bench_water_huge2(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_degenerate(criterion: &mut Criterion) {
@@ -282,8 +281,8 @@ fn bench_degenerate(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_bad_hole(criterion: &mut Criterion) {
@@ -294,8 +293,8 @@ fn bench_bad_hole(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_empty_square(criterion: &mut Criterion) {
@@ -306,8 +305,8 @@ fn bench_empty_square(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue16(criterion: &mut Criterion) {
@@ -318,8 +317,8 @@ fn bench_issue16(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue17(criterion: &mut Criterion) {
@@ -330,8 +329,8 @@ fn bench_issue17(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_steiner(criterion: &mut Criterion) {
@@ -342,8 +341,8 @@ fn bench_steiner(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue29(criterion: &mut Criterion) {
@@ -355,8 +354,8 @@ fn bench_issue29(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue34(criterion: &mut Criterion) {
@@ -367,8 +366,8 @@ fn bench_issue34(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue35(criterion: &mut Criterion) {
@@ -379,8 +378,8 @@ fn bench_issue35(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_self_touching(criterion: &mut Criterion) {
@@ -391,8 +390,8 @@ fn bench_self_touching(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_outside_ring(criterion: &mut Criterion) {
@@ -403,8 +402,8 @@ fn bench_outside_ring(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_simplified_us_border(criterion: &mut Criterion) {
@@ -415,8 +414,8 @@ fn bench_simplified_us_border(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_touching_holes(criterion: &mut Criterion) {
@@ -427,8 +426,8 @@ fn bench_touching_holes(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_hole_touching_outer(criterion: &mut Criterion) {
@@ -439,8 +438,8 @@ fn bench_hole_touching_outer(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_hilbert(criterion: &mut Criterion) {
@@ -451,8 +450,8 @@ fn bench_hilbert(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue45(criterion: &mut Criterion) {
@@ -463,8 +462,8 @@ fn bench_issue45(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_eberly_3(criterion: &mut Criterion) {
@@ -475,8 +474,8 @@ fn bench_eberly_3(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_eberly_6(criterion: &mut Criterion) {
@@ -487,8 +486,8 @@ fn bench_eberly_6(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue52(criterion: &mut Criterion) {
@@ -499,8 +498,8 @@ fn bench_issue52(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_shared_points(criterion: &mut Criterion) {
@@ -511,8 +510,8 @@ fn bench_shared_points(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_bad_diagonals(criterion: &mut Criterion) {
@@ -523,8 +522,8 @@ fn bench_bad_diagonals(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 fn bench_issue83(criterion: &mut Criterion) {
@@ -535,8 +534,8 @@ fn bench_issue83(criterion: &mut Criterion) {
         bench.iter(|| {
             triangles = black_box(earcutr::earcut(&data, &holeidxs, dimensions).unwrap());
         });
+        mkoutput(nm, &triangles);
     });
-    mkoutput(nm, triangles);
 }
 
 criterion_group!(
