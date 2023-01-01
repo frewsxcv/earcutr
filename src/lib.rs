@@ -911,8 +911,8 @@ pub fn earcut<T: Float>(
     hole_indices: &[VerticesIndex],
     dims: usize,
 ) -> Result<Vec<usize>, Error> {
-    if vertices.is_empty() {
-        return Err(Error::Unknown);
+    if vertices.is_empty() && hole_indices.is_empty() {
+        return Ok(vec![]);
     }
 
     if vertices.len() % 2 == 1 || dims > vertices.len() {
