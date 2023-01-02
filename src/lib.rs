@@ -361,45 +361,28 @@ impl<T: Float> LinkedLists<T> {
         let mut leftmost_idx = None;
         let mut contour_minx = T::max_value();
 
+        let clockwise_iter = vertices.0[start..end].iter().copied().enumerate();
+
+        let mut iter_body = |x_index: usize, x: T, y_index: usize, y: T| {
+            lastidx = Some(self.insert_node((start + x_index) / DIM, Coord { x, y }, lastidx));
+            if contour_minx > x {
+                contour_minx = x;
+                leftmost_idx = lastidx
+            };
+            if self.usehash {
+                self.min.y = vertices.0[y_index].min(self.min.y);
+                self.max.x = vertices.0[x_index].max(self.max.x);
+                self.max.y = vertices.0[y_index].max(self.max.y);
+            }
+        };
+
         if clockwise == (vertices.signed_area(start, end) > T::zero()) {
-            for i in (start..end).step_by(DIM) {
-                lastidx = Some(self.insert_node(
-                    i / DIM,
-                    Coord {
-                        x: vertices.0[i],
-                        y: vertices.0[i + 1],
-                    },
-                    lastidx,
-                ));
-                if contour_minx > vertices.0[i] {
-                    contour_minx = vertices.0[i];
-                    leftmost_idx = lastidx
-                };
-                if self.usehash {
-                    self.min.y = vertices.0[i + 1].min(self.min.y);
-                    self.max.x = vertices.0[i].max(self.max.x);
-                    self.max.y = vertices.0[i + 1].max(self.max.y);
-                }
+            for ((x_index, x), (y_index, y)) in clockwise_iter.tuples() {
+                iter_body(x_index, x, y_index, y);
             }
         } else {
-            for i in (start..=(end - DIM)).rev().step_by(DIM) {
-                lastidx = Some(self.insert_node(
-                    i / DIM,
-                    Coord {
-                        x: vertices.0[i],
-                        y: vertices.0[i + 1],
-                    },
-                    lastidx,
-                ));
-                if contour_minx > vertices.0[i] {
-                    contour_minx = vertices.0[i];
-                    leftmost_idx = lastidx
-                };
-                if self.usehash {
-                    self.min.y = vertices.0[i + 1].min(self.min.y);
-                    self.max.x = vertices.0[i].max(self.max.x);
-                    self.max.y = vertices.0[i + 1].max(self.max.y);
-                }
+            for ((y_index, y), (x_index, x)) in clockwise_iter.rev().tuples() {
+                iter_body(x_index, x, y_index, y);
             }
         }
 
