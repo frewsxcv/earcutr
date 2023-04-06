@@ -1093,7 +1093,10 @@ fn find_hole_bridge<T: Float>(
         }
     }
 
-    let Some(m) = m else { return NULL };
+    let m = match m {
+        Some(m) => m,
+        None => return NULL,
+    };
 
     // hole touches outer segment; pick lower endpoint
     if hx == qx {

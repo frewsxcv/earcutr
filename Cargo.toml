@@ -1,6 +1,6 @@
 [package]
 name = "earcutr"
-version = "0.4.1"
+version = "0.4.2"
 description = "port of MapBox's earcut triangulation code to Rust language"
 repository = "https://github.com/frewsxcv/earcutr/"
 license = "ISC"
