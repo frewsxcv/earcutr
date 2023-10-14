@@ -108,7 +108,7 @@ pub fn deviation<T: Float + Display>(
         a - vertices.signed_area(ix * DIM, iy * DIM).abs()
     });
 
-    let i = triangles.iter().skip(0).step_by(3).map(|x| x * DIM);
+    let i = triangles.iter().step_by(3).map(|x| x * DIM);
     let j = triangles.iter().skip(1).step_by(3).map(|x| x * DIM);
     let k = triangles.iter().skip(2).step_by(3).map(|x| x * DIM);
     let triangles_area = i.zip(j).zip(k).fold(T::zero(), |ta, ((a, b), c)| {

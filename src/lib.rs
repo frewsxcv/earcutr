@@ -682,7 +682,7 @@ impl NodeIndexTriangle {
 struct NodeTriangle<T: Float>(LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>);
 
 impl<T: Float> NodeTriangle<T> {
-    fn from_ear_node(ear_node: LinkedListNode<T>, ll: &mut LinkedLists<T>) -> Self {
+    fn from_ear_node(ear_node: LinkedListNode<T>, ll: &LinkedLists<T>) -> Self {
         NodeTriangle(
             ear_node.prev_linked_list_node(ll),
             ear_node,
