@@ -86,7 +86,7 @@ fn load_json(testname: &str) -> (Vec<f64>, Vec<usize>, usize) {
 fn bench_quadrilateral(criterion: &mut Criterion) {
     criterion.bench_function("bench_quadrilateral", |bench| {
         bench.iter(|| {
-            black_box(earcutr::earcut(
+            let _ = black_box(earcutr::earcut(
                 &[10., 0., 0., 50., 60., 60., 70., 10.],
                 &[],
                 2,
@@ -101,7 +101,7 @@ fn bench_hole(criterion: &mut Criterion) {
     v.extend(h);
     criterion.bench_function("bench_hole", |bench| {
         bench.iter(|| {
-            black_box(earcutr::earcut(&v, &[4], 2));
+            let _ = black_box(earcutr::earcut(&v, &[4], 2));
         })
     });
 }
