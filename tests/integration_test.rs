@@ -1,8 +1,3 @@
-extern crate earcutr;
-
-extern crate serde;
-extern crate serde_json;
-
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Read;

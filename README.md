@@ -13,7 +13,6 @@ This port is not affiliated with MapBox in any way and no endorsement is implied
 ## Usage
 
 ```rust
-extern crate earcutr;
 var triangles = earcutr::earcut(&[10,0, 0,50, 60,60, 70,10],&[],2).unwrap();
 println!("{:?}",triangles);  // [1, 0, 3, 3, 2, 1]
 ```
