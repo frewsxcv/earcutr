@@ -94,8 +94,7 @@ instead of 1 (is null)
 more time in earcut_linked than in is_ear, which is opposite from c++
 
 * maths: there is a small possibility that c++ earcut appears to be 
-optimizing the point_in_tria
-ngle math differently than Rust,
+optimizing the point_in_triangle math differently than Rust,
 
 * Subtraction that is unnoticeable: what about eliminating the 
 'subtraction' in point_in_triangle by translating the entire polygon so 
@@ -618,7 +617,7 @@ test bench_water_huge           ... bench:  30,045,589 ns/iter (+/- 539,955)
 test bench_water_huge2          ... bench:  60,316,824 ns/iter (+/- 2,158,995)
 ```
 
-* Itrating through the vector of nodes instead of through the linked list indexes
+* Iterating through the vector of nodes instead of through the linked list indexes
 
 As this 'simulates' a linked list, we can and do iterate through
 using the next / previous pointers (which are indexes into a vector). 
@@ -647,7 +646,7 @@ We can do this by iterating through the original data, or by iterating
 through nodes.
 
 rustfmt expands the first a huge amount taking up many lines of space,
-becasue we have to skip(1) to hit the y data and clone() to deal with the
+because we have to skip(1) to hit the y data and clone() to deal with the
 way the data is stored...or...
 
 ```rust
@@ -693,7 +692,7 @@ grow the vectors as the data is added to them, first during construction
 of the nodes, then as the nodes are cut off by the earcutter, we have
 to grow the triangles vector.
 
-Or do we? Rust Vectors, like most vectors in computer lamnguages, have
+Or do we? Rust Vectors, like most vectors in computer languages, have
 'capacity'. You can reserve a big chunk of RAM for your vector even 
 if you dont use it all right away. Then, subsequent 'push' operations
 are really just filing in RAM you already had reserved for yourself. 
@@ -702,7 +701,7 @@ We can do this with our data... ok. I did that a while back, forgot to
 even mention it.
 
 But... we can also do it for our triangles. And we get a tiny little
-boost..  stranegly enough on the smaller shapes :
+boost..  strangely enough on the smaller shapes :
 
 ```rust
 running 7 tests
@@ -724,7 +723,7 @@ tried to optimize with vector iteration, failed.
 
 it iterates through a ring, z-indexing each point.
 
-the werd thing is that as the algorithm overall progresses,
+the weird thing is that as the algorithm overall progresses,
 the number of 'unused' vector nodes shrinks. 
 
 the issue is that if you use vector iteration, you wind up
