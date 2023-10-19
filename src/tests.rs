@@ -338,19 +338,19 @@ fn test_earcut_linked() {
     let m = vec![0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&Vertices(&m), 0, m.len(), true).unwrap();
     let mut tris = FinalTriangleIndices::default();
-    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris);
+    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris).unwrap();
     assert!(tris.0.len() == 6);
 
     let m = vec![0.0, 0.0, 0.5, 0.5, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&Vertices(&m), 0, m.len(), true).unwrap();
     let mut tris = FinalTriangleIndices::default();
-    earcut_linked_unhashed::<0, f32>(&mut ll, 1, &mut tris);
+    earcut_linked_unhashed::<0, f32>(&mut ll, 1, &mut tris).unwrap();
     assert!(tris.0.len() == 9);
 
     let m = vec![0.0, 0.0, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
     let (mut ll, _) = linked_list(&Vertices(&m), 0, m.len(), true).unwrap();
     let mut tris = FinalTriangleIndices::default();
-    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris);
+    earcut_linked_hashed::<0, f32>(&mut ll, 1, &mut tris).unwrap();
     assert!(tris.0.len() == 9);
 }
 
@@ -518,7 +518,8 @@ fn test_eliminate_hole() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&Vertices(&body), 0, bodyend, true).unwrap();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
     assert!(cycle_len(&ll, 1) == 4);
     assert!(cycle_len(&ll, 5) == 4);
     ll.eliminate_hole(holestart / DIM + 1, 1);
@@ -532,7 +533,8 @@ fn test_eliminate_hole() {
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
     assert!(cycle_len(&ll, 1) == 10);
     assert!(cycle_len(&ll, 5) == 10);
     assert!(cycle_len(&ll, 11) == 4);
@@ -557,14 +559,16 @@ fn test_cycle_len() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&Vertices(&body), 0, bodyend, true).unwrap();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
 
     let hole = vec![0.2, 0.2, 0.8, 0.2, 0.8, 0.8];
     let bodyend = body.len();
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
 
     dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
@@ -580,14 +584,16 @@ fn test_cycles_report() {
     let holestart = bodyend;
     let holeend = body.len();
     let (mut ll, _) = linked_list(&Vertices(&body), 0, bodyend, true).unwrap();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
 
     let hole = vec![0.2, 0.2, 0.8, 0.2, 0.8, 0.8];
     let bodyend = body.len();
     body.extend(hole);
     let holestart = bodyend;
     let holeend = body.len();
-    ll.add_contour(&Vertices(&body), holestart, holeend, false);
+    ll.add_contour(&Vertices(&body), holestart, holeend, false)
+        .unwrap();
 
     dlog!(5, "{}", crate::legacy::dump(&ll));
     dlog!(5, "{}", cycles_report(&ll));
@@ -605,7 +611,7 @@ fn test_eliminate_holes() {
     body.extend(hole1);
     body.extend(hole2);
 
-    eliminate_holes(&mut ll, &Vertices(&body), &hole_indices, 0);
+    eliminate_holes(&mut ll, &Vertices(&body), &hole_indices, 0).unwrap();
 }
 
 #[test]
@@ -638,7 +644,7 @@ fn test_split_earcut() {
     let (mut ll, _) = linked_list(&Vertices(&m), 0, m.len(), true).unwrap();
     let start = 1;
     let mut triangles = FinalTriangleIndices::default();
-    split_earcut(&mut ll, start, &mut triangles);
+    split_earcut(&mut ll, start, &mut triangles).unwrap();
     assert!(triangles.0.len() == 6);
     assert!(ll.nodes.len() == 7);
 
@@ -649,7 +655,7 @@ fn test_split_earcut() {
     let (mut ll, _) = linked_list(&Vertices(&m), 0, m.len(), true).unwrap();
     let start = 1;
     let mut triangles = FinalTriangleIndices::default();
-    split_earcut(&mut ll, start, &mut triangles);
+    split_earcut(&mut ll, start, &mut triangles).unwrap();
     assert!(ll.nodes.len() == 13);
 }
 
@@ -719,5 +725,5 @@ fn test_infinite_loop_bug() {
         -1358303.0608723268,
     ];
     let hole_indices = [2, 4];
-    earcut(&coords, &hole_indices, DIM);
+    earcut(&coords, &hole_indices, DIM).unwrap();
 }
