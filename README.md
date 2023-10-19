@@ -203,7 +203,7 @@ through the z-curve to check every 2-d point that is 'near' the polygon
 ear.
 
 As you can imagine, if 14,000 of your points in your polygon are outside
-this box, and only 1000 are in the box, thats quite a bit less math 
+this box, and only 1000 are in the box, that's quite a bit less math
 and calculation to be done than if you had to iterate through 15,000 points.
 
 #### Additional massaging
@@ -237,7 +237,7 @@ during conversion from base 10 to 32-bit base 2.
 This triangulator is built primarily as an exercise in porting 
 javascript to Rust. However some minor details of the implementation 
 have been modified for speed optimization. The code is supposed to 
-produce exacly the same output as the javascript version, by using the 
+produce exactly the same output as the javascript version, by using the
 large amount of test data supplied with the original javascript code. 
 The speed is comparable with Mapbox's C++ version of earcut, earcut.hpp, 
 except for input of very small polygons where the speed is much slower. 
@@ -395,13 +395,13 @@ the inline macro.
 * Vector [Indexing] and bounds checking in Rust doesn't hurt speed here
 
 As mentioned, this code is implemented as a double-linked list sitting on
-top of a vector, an the 'pointers' are actually indexes into the vector.
+top of a vector, and the 'pointers' are actually indexes into the vector.
 There are several macros used that represent the normal linked list
 language, such as next!(index) prev!(index), which take index integers
 as input, and return a Node or Reference to Node. Each index uses Rust's
 built in vector indexing, which uses 'bounds checking' so it will panic
 immediately if memory outside the vector range is accessed on accident.
-The panic and backtrace will report exactly what line the access occured
+The panic and backtrace will report exactly what line the access occurred
 and the value of the index that was too large to use.
 
 Theoretically this slows down the program. In practice, it does not.
