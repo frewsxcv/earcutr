@@ -102,7 +102,7 @@ fn bench_hole(criterion: &mut Criterion) {
     criterion.bench_function("bench_hole", |bench| {
         bench.iter(|| {
             let _ = black_box(earcutr::earcut(&v, &[4], 2));
-        })
+        });
     });
 }
 
@@ -114,7 +114,7 @@ fn bench_flatten(criterion: &mut Criterion) {
     criterion.bench_function("bench_flatten", |bench| {
         bench.iter(|| {
             let (_vertices, _holes, _dimensions) = black_box(earcutr::legacy::flatten(&v));
-        })
+        });
     });
 }
 
@@ -126,7 +126,7 @@ fn bench_indices_2d(criterion: &mut Criterion) {
                 &[],
                 2,
             ));
-        })
+        });
     });
 }
 
@@ -140,7 +140,7 @@ fn bench_indices_3d(criterion: &mut Criterion) {
                 &[],
                 3,
             ));
-        })
+        });
     });
 }
 
@@ -148,7 +148,7 @@ fn bench_empty(criterion: &mut Criterion) {
     criterion.bench_function("bench_empty", |bench| {
         bench.iter(|| {
             let _indices = black_box(earcutr::earcut::<f32>(&[], &[], 2));
-        })
+        });
     });
 }
 
