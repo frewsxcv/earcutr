@@ -367,7 +367,7 @@ impl<T: Float> LinkedLists<T> {
             lastidx = Some(self.insert_node((start + x_index) / DIM, Coord { x, y }, lastidx));
             if contour_minx > x {
                 contour_minx = x;
-                leftmost_idx = lastidx
+                leftmost_idx = lastidx;
             };
             if self.usehash {
                 self.min.y = vertices.0[y_index].min(self.min.y);
@@ -475,7 +475,7 @@ impl<'a, T: Float> Iterator for NodePairIterator<'a, T> {
             // only one branch, saves time
             self.pending_result = None;
         } else {
-            self.pending_result = Some((&self.ll.nodes[self.cur], nextref!(self.ll, self.cur)))
+            self.pending_result = Some((&self.ll.nodes[self.cur], nextref!(self.ll, self.cur)));
         }
         cur_result
     }
@@ -872,7 +872,7 @@ fn linked_list<T: Float>(
 ) -> Result<(LinkedLists<T>, LinkedListNodeIndex), Error> {
     let mut ll: LinkedLists<T> = LinkedLists::new(vertices.len() / DIM);
     if vertices.len() < 80 {
-        ll.usehash = false
+        ll.usehash = false;
     };
     let (last_idx, _) = ll.add_contour(vertices, start, end, clockwise)?;
     Ok((ll, last_idx))
