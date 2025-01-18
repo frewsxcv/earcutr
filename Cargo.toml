@@ -7,7 +7,7 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-itertools = "0.11"
+itertools = "0.14"
 num-traits = "0.2"
 
 [dev-dependencies]
