@@ -1,5 +1,7 @@
 # Earcutr
 
+⚠️ **This crate is deprecated. Instead you should use <https://github.com/georust/earcut>.** ⚠️
+
 This is a port of the MapBox company's Earcut computer code, which triangulates polygons. 
 Please see https://github.com/mapbox/earcut for more information about the original 
 javascript code. This port is to the Rust computer language, and is single-threaded.
