@@ -2,6 +2,8 @@
 
 ⚠️ **This crate is deprecated. Instead you should use <https://github.com/georust/earcut>.** ⚠️
 
+⚠️ **This repository has moved to: <https://tangled.org/did:plc:bfqfhtxvzrcq5bdm5cp5pg2y>.** ⚠️
+
 This is a port of the MapBox company's Earcut computer code, which triangulates polygons. 
 Please see https://github.com/mapbox/earcut for more information about the original 
 javascript code. This port is to the Rust computer language, and is single-threaded.
